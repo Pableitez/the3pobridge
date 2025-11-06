@@ -2025,6 +2025,21 @@ function generateFilterSidebar(headers) {
   const headerHash = getHeaderHash(headers);
   const filters = loadMyFilters();
   const filterValuesToSave = { ...getModuleFilterValues() };
+  
+  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM
+  const filterItems = document.querySelectorAll('.filter-item');
+  filterItems.forEach(item => {
+    const column = item.dataset.column;
+    if (!column) return;
+    
+    // Buscar el selector de condición en este filtro
+    const conditionSelect = item.querySelector('.filter-condition-select');
+    if (conditionSelect && conditionSelect.value) {
+      const conditionKey = `${column}_condition`;
+      filterValuesToSave[conditionKey] = conditionSelect.value;
+    }
+  });
+  
   // Asegurar que todas las condiciones se guarden
   // IMPORTANTE: Verificar que las condiciones estén presentes para todas las columnas con filtros activos
   const activeFilters = getModuleActiveFilters();
@@ -2036,6 +2051,7 @@ function generateFilterSidebar(headers) {
       filterValuesToSave[conditionKey] = 'contains';
     }
   });
+  
   filters[name] = { filterValues: filterValuesToSave, headerHash, headers, linkedUrgencyCard: urgencyCard };
   localStorage.setItem('myFilters', JSON.stringify(filters));
   
@@ -2892,6 +2908,21 @@ function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType =
   const headers = Object.keys(getOriginalData()[0] || {});
   const filterValues = { ...getModuleFilterValues() };
   const activeFilters = { ...getModuleActiveFilters() };
+  
+  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM
+  const filterItems = document.querySelectorAll('.filter-item');
+  filterItems.forEach(item => {
+    const column = item.dataset.column;
+    if (!column) return;
+    
+    // Buscar el selector de condición en este filtro
+    const conditionSelect = item.querySelector('.filter-condition-select');
+    if (conditionSelect && conditionSelect.value) {
+      const conditionKey = `${column}_condition`;
+      filterValues[conditionKey] = conditionSelect.value;
+    }
+  });
+  
   // Asegurar que todas las condiciones se guarden
   // IMPORTANTE: Verificar que las condiciones estén presentes para todas las columnas con filtros activos
   Object.keys(activeFilters).forEach(column => {
