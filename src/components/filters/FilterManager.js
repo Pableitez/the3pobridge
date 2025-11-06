@@ -2527,23 +2527,27 @@ function applyFilters() {
                                     matches = normalizedCell2.includes(normalizedVal2);
                                 }
                         }
-                        // Para NOT: si alguno coincide, no debe pasar
-                        // Para condiciones normales: si alguno coincide, debe pasar
+                        // Para NOT: si alguno coincide, la fila NO debe pasar (debe ser excluida)
+                        // Para condiciones normales: si alguno coincide, la fila debe pasar (debe ser incluida)
                         if (condition === 'not_contains' || condition === 'not_equals') {
                             if (matches) {
                                 anyMatches = true;
-                                break; // Si alguno coincide, no debe pasar
+                                break; // Si alguno coincide, la fila NO debe pasar
                             }
                         } else {
                             if (matches) {
                                 anyMatches = true;
-                                break; // Si alguno coincide, debe pasar
+                                break; // Si alguno coincide, la fila debe pasar
                             }
                         }
                     }
                     // Aplicar lógica NOT
+                    // Para NOT: si anyMatches es true (algún valor coincide), la fila NO debe pasar (return false)
+                    // Si anyMatches es false (ningún valor coincide), la fila debe pasar (return true)
                     if (condition === 'not_contains' || condition === 'not_equals') {
-                        return !anyMatches; // Si ningún valor coincide, pasa el filtro
+                        const shouldPass = !anyMatches; // Si ningún valor coincide, pasa el filtro
+                        console.log(`🔍   Multiple values NOT check: valuesToCheck=${valuesToCheck.join(',')}, anyMatches=${anyMatches}, shouldPass=${shouldPass}`);
+                        return shouldPass;
                     }
                     return anyMatches; // Si algún valor coincide, pasa el filtro
                 }
