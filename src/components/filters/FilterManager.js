@@ -1376,9 +1376,19 @@ function generateFilterSidebar(headers) {
           
           // Cargar valor guardado si existe
           const savedTextValue = getModuleFilterValues()[selectedColumn];
-          if (savedTextValue && typeof savedTextValue === 'string' && !Array.isArray(savedTextValue)) {
-            textInput.value = savedTextValue;
-            filterDiv.classList.add('active');
+          console.log('🔍 Loading saved value for', selectedColumn, ':', savedTextValue, 'type:', typeof savedTextValue, 'isArray:', Array.isArray(savedTextValue));
+          
+          if (savedTextValue) {
+            if (typeof savedTextValue === 'string' && !Array.isArray(savedTextValue)) {
+              // Valor string (un solo valor del textInput)
+              textInput.value = savedTextValue;
+              filterDiv.classList.add('active');
+              console.log('✅ Loaded string value into textInput:', savedTextValue);
+            } else if (Array.isArray(savedTextValue) && savedTextValue.length > 0) {
+              // Valor array (múltiples valores o checkboxes)
+              // No poner nada en textInput si hay valores de checkbox
+              console.log('✅ Found array value, not loading into textInput');
+            }
           }
           
           // Aplicar filtro cuando se escribe
@@ -2440,12 +2450,21 @@ function applyFilters() {
         } else {
             const value = moduleFilterValues[column];
             // Verificar que el valor existe y no está vacío
-            if (!value) return;
-            if (Array.isArray(value) && value.length === 0) return;
-            if (typeof value === 'string' && value.trim() === '') return;
+            if (!value) {
+              console.log(`⚠️ No value found for column "${column}"`);
+              return;
+            }
+            if (Array.isArray(value) && value.length === 0) {
+              console.log(`⚠️ Empty array for column "${column}"`);
+              return;
+            }
+            if (typeof value === 'string' && value.trim() === '') {
+              console.log(`⚠️ Empty string for column "${column}"`);
+              return;
+            }
             
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
-            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
+            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value), 'value length:', typeof value === 'string' ? value.length : 'N/A');
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) {
