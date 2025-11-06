@@ -2479,8 +2479,12 @@ function applyFilters() {
 
     let filteredData = [...data];
 
+    console.log('🔍 applyFilters() called with moduleActiveFilters:', moduleActiveFilters);
+    console.log('🔍 applyFilters() called with moduleFilterValues:', moduleFilterValues);
+    
     // Aplicar filtros del módulo
     Object.entries(moduleActiveFilters).forEach(([column, filterType]) => {
+        console.log(`🔍 Processing filter for column "${column}" with type "${filterType}"`);
         if (filterType === 'date') {
             const arr = Array.isArray(moduleFilterValues[column]) ? moduleFilterValues[column] : null;
             const hasRange = moduleFilterValues[`${column}_start`] || moduleFilterValues[`${column}_end`] || moduleFilterValues[`${column}_empty`];
@@ -2536,22 +2540,24 @@ function applyFilters() {
             return;
         } else {
             const value = moduleFilterValues[column];
+            console.log(`🔍 Checking value for column "${column}":`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
+            
             // Verificar que el valor existe y no está vacío
             if (!value) {
-              console.log(`⚠️ No value found for column "${column}"`);
+              console.log(`⚠️ No value found for column "${column}" - skipping filter`);
               return;
             }
             if (Array.isArray(value) && value.length === 0) {
-              console.log(`⚠️ Empty array for column "${column}"`);
+              console.log(`⚠️ Empty array for column "${column}" - skipping filter`);
               return;
             }
             if (typeof value === 'string' && value.trim() === '') {
-              console.log(`⚠️ Empty string for column "${column}"`);
+              console.log(`⚠️ Empty string for column "${column}" - skipping filter`);
               return;
             }
             
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
-            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value), 'value length:', typeof value === 'string' ? value.length : 'N/A');
+            console.log(`✅ Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value), 'value length:', typeof value === 'string' ? value.length : 'N/A');
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) {
