@@ -1407,8 +1407,18 @@ function generateFilterSidebar(headers) {
           });
           
           applyTextInputBtn.addEventListener('click', () => {
-            console.log('🔘 Apply button clicked for text input');
-            handleTextInput();
+            console.log('🔘 Apply button clicked for text input, value:', textInput.value);
+            const val = textInput.value.trim();
+            if (val) {
+              console.log('🔘 Calling handleTextInput with value:', val);
+              handleTextInput();
+              console.log('🔘 After handleTextInput, moduleFilterValues:', getModuleFilterValues());
+              console.log('🔘 After handleTextInput, moduleActiveFilters:', getModuleActiveFilters());
+              // Forzar aplicación inmediata de filtros
+              applyFilters();
+            } else {
+              console.log('⚠️ Empty value, not applying filter');
+            }
           });
           
           textInputContainer.appendChild(textInput);
