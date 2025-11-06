@@ -1875,7 +1875,10 @@ function generateFilterSidebar(headers) {
   const headers = Object.keys(getOriginalData()[0] || {});
   const headerHash = getHeaderHash(headers);
   const filters = loadMyFilters();
-  filters[name] = { filterValues: { ...getModuleFilterValues() }, headerHash, headers, linkedUrgencyCard: urgencyCard };
+  const filterValues = { ...getModuleFilterValues() };
+  // Asegurar que las condiciones se guarden correctamente
+  console.log('💾 Saving filter:', name, 'with filterValues:', filterValues);
+  filters[name] = { filterValues, headerHash, headers, linkedUrgencyCard: urgencyCard };
   localStorage.setItem('myFilters', JSON.stringify(filters));
   
   // Trigger auto-save
@@ -1932,16 +1935,23 @@ function generateFilterSidebar(headers) {
         return;
       }
       if (filterObj.headerHash === headerHash) {
-        setModuleFilterValues({ ...filterObj.filterValues });
-        // Reconstruct activeFilters from filterValues
+        // Asegurar que todas las condiciones se copien correctamente
+        const filterValuesToApply = { ...filterObj.filterValues };
+        console.log('🔍 Applying saved filter:', name, 'with filterValues:', filterValuesToApply);
+        setModuleFilterValues(filterValuesToApply);
+        // Reconstruct activeFilters from filterValues (excluyendo _condition)
         const newActiveFilters = {};
         for (const key of Object.keys(filterObj.filterValues)) {
+          // Excluir claves _condition al reconstruir activeFilters
+          if (key.endsWith('_condition')) {
+            continue;
+          }
           if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
             const base = key.replace(/_(start|end|empty)$/, '');
             newActiveFilters[base] = 'date';
           } else if (Array.isArray(filterObj.filterValues[key])) {
             newActiveFilters[key] = 'categorical';
-          } else {
+          } else if (filterObj.filterValues[key] !== null && filterObj.filterValues[key] !== undefined && filterObj.filterValues[key] !== '') {
             newActiveFilters[key] = 'text';
           }
         }
@@ -1955,9 +1965,12 @@ function generateFilterSidebar(headers) {
               const conditionSelect = document.querySelector(`.filter-item[data-column="${column}"] .filter-condition-select`);
               if (conditionSelect) {
                 conditionSelect.value = filterObj.filterValues[key];
+                console.log(`✅ Restored condition for column "${column}": ${filterObj.filterValues[key]}`);
               }
             }
           });
+          // Aplicar filtros después de restaurar las condiciones
+          applyFilters();
         }, 100);
         // Forzar que la pestaña y panel de My Filters estén activos
         const myFiltersTab = document.querySelector('.filter-tab[data-target="myfilters"]');
@@ -1968,6 +1981,7 @@ function generateFilterSidebar(headers) {
           myFiltersTab.classList.add('active');
           myFiltersPanel.classList.add('active');
         }
+        // Aplicar filtros inmediatamente (también se aplicará en el setTimeout)
         applyFilters();
         renderActiveFiltersSummaryChips();
         
