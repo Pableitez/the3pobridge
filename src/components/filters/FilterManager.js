@@ -1382,12 +1382,15 @@ function generateFilterSidebar(headers) {
           }
           
           // Aplicar filtro cuando se escribe
-          const handleTextInput = debounce(() => {
+          const handleTextInput = () => {
             const textValue = textInput.value.trim();
             const condition = getModuleFilterValues()[`${selectedColumn}_condition`] || 'contains';
             
             if (textValue) {
               // Si hay un valor escrito, usar ese valor como filtro
+              // Soporte para múltiples valores separados por comas
+              const values = textValue.split(',').map(v => v.trim()).filter(v => v !== '');
+              
               // Limpiar checkboxes seleccionados cuando se usa el input de texto
               selectedSet.clear();
               // Actualizar checkboxes visualmente
@@ -1398,11 +1401,25 @@ function generateFilterSidebar(headers) {
               }
               
               const currentValues = { ...getModuleFilterValues() };
-              currentValues[selectedColumn] = textValue;
+              // Si hay múltiples valores, guardarlos como array, si no, como string
+              if (values.length > 1) {
+                currentValues[selectedColumn] = values;
+              } else {
+                currentValues[selectedColumn] = values[0];
+              }
               currentValues[`${selectedColumn}_condition`] = condition;
               setModuleFilterValues(currentValues);
               setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
               filterDiv.classList.add('active');
+              
+              // Aplicar filtros inmediatamente
+              updateActiveFiltersSummary();
+              applyFilters();
+              renderActiveFiltersSummaryChips();
+              // Actualizar el resumen del input del dropdown
+              if (typeof updateInputSummary === 'function') {
+                updateInputSummary();
+              }
             } else {
               // Si está vacío, limpiar el filtro
               const updated = { ...getModuleFilterValues() };
@@ -1415,19 +1432,31 @@ function generateFilterSidebar(headers) {
                 filterDiv.classList.remove('active');
               }
               setModuleFilterValues(updated);
+              updateActiveFiltersSummary();
+              applyFilters();
+              renderActiveFiltersSummaryChips();
             }
-            updateActiveFiltersSummary();
-            applyFilters();
-            renderActiveFiltersSummaryChips();
-            // Actualizar el resumen del input del dropdown
-            if (typeof updateInputSummary === 'function') {
-              updateInputSummary();
-            }
-          }, 300);
+          };
           
-          textInput.addEventListener('input', handleTextInput);
+          // Debounced version para mientras escribe
+          const handleTextInputDebounced = debounce(handleTextInput, 300);
+          
+          textInput.addEventListener('input', handleTextInputDebounced);
           textInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+              e.preventDefault();
+              handleTextInput();
+            }
+          });
+          
+          // Asegurar que el filtro se aplique cuando se presiona el botón Apply
+          // Guardar referencia al input para que esté disponible globalmente
+          filterDiv.textInput = textInput;
+          filterDiv.handleTextInput = handleTextInput;
+          
+          // También aplicar cuando se pierde el foco
+          textInput.addEventListener('blur', () => {
+            if (textInput.value.trim()) {
               handleTextInput();
             }
           });

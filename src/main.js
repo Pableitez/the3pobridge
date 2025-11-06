@@ -2611,6 +2611,18 @@ function setupFilterEvents() {
   applyFilterBtn?.addEventListener('click', () => {
     try {
       if (filterManager) {
+        // Procesar todos los inputs de texto antes de aplicar filtros
+        const filterItems = document.querySelectorAll('.filter-item');
+        filterItems.forEach(filterDiv => {
+          if (filterDiv.textInput && filterDiv.handleTextInput) {
+            // Procesar el input de texto si tiene valor
+            const textValue = filterDiv.textInput.value.trim();
+            if (textValue) {
+              filterDiv.handleTextInput();
+            }
+          }
+        });
+        
         filterManager.applyFilters();
         updateActiveFiltersSummary();
         renderActiveFiltersSummaryChips();
