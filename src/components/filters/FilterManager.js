@@ -1440,15 +1440,26 @@ function generateFilterSidebar(headers) {
                 currentValues[selectedColumn] = values[0];
               }
               currentValues[`${selectedColumn}_condition`] = condition;
+              
+              console.log(`💾 About to save filter for "${selectedColumn}":`, {
+                value: currentValues[selectedColumn],
+                condition: condition,
+                isArray: Array.isArray(currentValues[selectedColumn]),
+                type: typeof currentValues[selectedColumn],
+                fullObject: currentValues
+              });
+              
               setModuleFilterValues(currentValues);
               setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
               filterDiv.classList.add('active');
               
+              // Verificar que se guardó correctamente
+              const savedValue = getModuleFilterValues()[selectedColumn];
               console.log(`✅ Text input filter applied for "${selectedColumn}":`, {
-                value: currentValues[selectedColumn],
-                condition: condition,
-                isArray: Array.isArray(currentValues[selectedColumn]),
-                type: typeof currentValues[selectedColumn]
+                savedValue: savedValue,
+                savedType: typeof savedValue,
+                savedIsArray: Array.isArray(savedValue),
+                condition: getModuleFilterValues()[`${selectedColumn}_condition`]
               });
               
               // Aplicar filtros inmediatamente
