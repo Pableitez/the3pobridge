@@ -1485,7 +1485,18 @@ function generateFilterSidebar(headers) {
               filteredValues.forEach(val => {
                 if (val !== '') selectedSet.add(val);
               });
-              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+              // Preservar la condición al actualizar los valores
+              const currentValues = { ...getModuleFilterValues() };
+              currentValues[selectedColumn] = Array.from(selectedSet);
+              // Asegurar que la condición se preserve
+              const conditionKey = `${selectedColumn}_condition`;
+              if (currentValues[conditionKey]) {
+                // La condición ya existe, mantenerla
+              } else {
+                // Si no existe, usar 'contains' por defecto
+                currentValues[conditionKey] = 'contains';
+              }
+              setModuleFilterValues(currentValues);
               filterDiv.classList.add('active');
               renderCheckboxList();
               updateActiveFiltersSummary();
@@ -1526,10 +1537,22 @@ function generateFilterSidebar(headers) {
                 selectedSet.add('__EMPTY__');
                 emptyBtn2.classList.add('active');
               }
-              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+              // Preservar la condición al actualizar los valores
+              const currentValues = { ...getModuleFilterValues() };
+              currentValues[selectedColumn] = Array.from(selectedSet);
+              // Asegurar que la condición se preserve
+              const conditionKey = `${selectedColumn}_condition`;
+              if (currentValues[conditionKey]) {
+                // La condición ya existe, mantenerla
+              } else {
+                // Si no existe, usar 'contains' por defecto
+                currentValues[conditionKey] = 'contains';
+              }
+              setModuleFilterValues(currentValues);
               setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
               filterDiv.classList.toggle('active', selectedSet.size > 0);
               updateActiveFiltersSummary();
+              applyFilters();
               updateInputSummary();
             });
             list.appendChild(emptyBtn2);
@@ -1568,10 +1591,22 @@ function generateFilterSidebar(headers) {
                 } else {
                   selectedSet.delete(val);
                 }
-                setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+                // Preservar la condición al actualizar los valores
+                const currentValues = { ...getModuleFilterValues() };
+                currentValues[selectedColumn] = Array.from(selectedSet);
+                // Asegurar que la condición se preserve
+                const conditionKey = `${selectedColumn}_condition`;
+                if (currentValues[conditionKey]) {
+                  // La condición ya existe, mantenerla
+                } else {
+                  // Si no existe, usar 'contains' por defecto
+                  currentValues[conditionKey] = 'contains';
+                }
+                setModuleFilterValues(currentValues);
                 setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
                 filterDiv.classList.toggle('active', selectedSet.size > 0);
                 updateActiveFiltersSummary();
+                applyFilters();
                 updateInputSummary();
               });
               
