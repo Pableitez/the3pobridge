@@ -2133,6 +2133,15 @@ function generateFilterSidebar(headers) {
           }
         }
         setModuleActiveFilters(newActiveFilters);
+        // VERIFICAR que las condiciones se aplicaron correctamente ANTES de aplicar filtros
+        const filterValuesAfterSet = getModuleFilterValues();
+        const conditionKeysAfterSet = Object.keys(filterValuesAfterSet).filter(k => k.endsWith('_condition'));
+        console.log('🔍 Filter values after setModuleFilterValues:', filterValuesAfterSet);
+        console.log('🔍 Condition keys after set:', conditionKeysAfterSet);
+        conditionKeysAfterSet.forEach(ck => {
+          const col = ck.replace('_condition', '');
+          console.log(`🔍   After set: ${col}_condition = "${filterValuesAfterSet[ck]}", ${col} =`, filterValuesAfterSet[col]);
+        });
         generateFilterSidebar(headers);
         // Aplicar filtros INMEDIATAMENTE con las condiciones guardadas
         // Esto es crítico para que las condiciones NOT funcionen
