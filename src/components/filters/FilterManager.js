@@ -1354,9 +1354,11 @@ function generateFilterSidebar(headers) {
           conditionSelect.addEventListener('change', () => {
             const key = `${selectedColumn}_condition`;
             const newCondition = conditionSelect.value;
+            console.log(`🔄 Condition changed for "${selectedColumn}": "${newCondition}"`);
             const currentValues = { ...getModuleFilterValues() };
             currentValues[key] = newCondition;
             setModuleFilterValues(currentValues);
+            console.log(`✅ Condition saved: ${key} = "${newCondition}"`);
             // Reaplicar filtros con la nueva condición
             applyFilters();
             updateActiveFiltersSummary();
@@ -2123,12 +2125,23 @@ function generateFilterSidebar(headers) {
               const column = key.replace('_condition', '');
               const conditionSelect = document.querySelector(`.filter-item[data-column="${column}"] .filter-condition-select`);
               if (conditionSelect) {
-                conditionSelect.value = filterObj.filterValues[key];
-                console.log(`✅ Restored condition selector for "${column}": "${filterObj.filterValues[key]}"`);
-                // Disparar evento change para asegurar que se guarde la condición
-                conditionSelect.dispatchEvent(new Event('change'));
+                const conditionValue = filterObj.filterValues[key];
+                conditionSelect.value = conditionValue;
+                console.log(`✅ Restored condition selector for "${column}": "${conditionValue}"`);
+                // Asegurar que la condición se guarde en el estado inmediatamente
+                const currentValues = { ...getModuleFilterValues() };
+                currentValues[`${column}_condition`] = conditionValue;
+                setModuleFilterValues(currentValues);
+                console.log(`✅ Condition saved immediately: ${column}_condition = "${conditionValue}"`);
+                // Disparar evento change para asegurar que se ejecuten los listeners
+                conditionSelect.dispatchEvent(new Event('change', { bubbles: true }));
               } else {
                 console.warn(`⚠️ Condition selector not found for column "${column}"`);
+                // Si no se encuentra el selector, guardar la condición directamente
+                const currentValues = { ...getModuleFilterValues() };
+                currentValues[`${column}_condition`] = filterObj.filterValues[key];
+                setModuleFilterValues(currentValues);
+                console.log(`✅ Condition saved directly (selector not found): ${column}_condition = "${filterObj.filterValues[key]}"`);
               }
               // También restaurar el input de texto si existe
               const textInput = document.querySelector(`.filter-item[data-column="${column}"] .filter-text-input`);
