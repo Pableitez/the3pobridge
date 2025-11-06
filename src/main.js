@@ -3208,6 +3208,8 @@ function applyDashboardQuickFilters() {
       }
     }
   });
+  // Debug: Verificar que las condiciones se están copiando
+  console.log('🔍 Combined filter values with conditions:', Object.keys(combinedFilterValues).filter(k => k.endsWith('_condition')));
   setModuleFilterValues(combinedFilterValues);
   setModuleActiveFilters(combinedActiveFilters);
   const filteredData = getFilteredData();
