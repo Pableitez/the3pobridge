@@ -1391,6 +1391,21 @@ function generateFilterSidebar(headers) {
               // Soporte para múltiples valores separados por comas
               const values = textValue.split(',').map(v => v.trim()).filter(v => v !== '');
               
+              if (values.length === 0) {
+                // Si no hay valores válidos después de filtrar, limpiar
+                const updated = { ...getModuleFilterValues() };
+                delete updated[selectedColumn];
+                const activeFilters = { ...getModuleActiveFilters() };
+                delete activeFilters[selectedColumn];
+                setModuleActiveFilters(activeFilters);
+                filterDiv.classList.remove('active');
+                setModuleFilterValues(updated);
+                updateActiveFiltersSummary();
+                applyFilters();
+                renderActiveFiltersSummaryChips();
+                return;
+              }
+              
               // Limpiar checkboxes seleccionados cuando se usa el input de texto
               selectedSet.clear();
               // Actualizar checkboxes visualmente
@@ -1405,12 +1420,19 @@ function generateFilterSidebar(headers) {
               if (values.length > 1) {
                 currentValues[selectedColumn] = values;
               } else {
+                // Un solo valor: guardar como string
                 currentValues[selectedColumn] = values[0];
               }
               currentValues[`${selectedColumn}_condition`] = condition;
               setModuleFilterValues(currentValues);
               setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
               filterDiv.classList.add('active');
+              
+              console.log(`✅ Text input filter applied for "${selectedColumn}":`, {
+                value: currentValues[selectedColumn],
+                condition: condition,
+                isArray: Array.isArray(currentValues[selectedColumn])
+              });
               
               // Aplicar filtros inmediatamente
               updateActiveFiltersSummary();
@@ -2405,7 +2427,7 @@ function applyFilters() {
             const value = moduleFilterValues[column];
             if (!value || (Array.isArray(value) && value.length === 0)) return;
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
-            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value);
+            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) {
@@ -2430,14 +2452,16 @@ function applyFilters() {
                     }
                     return isIncluded;
                 }
+                // Valor es un string (un solo valor del input de texto)
                 let matches = false;
                 switch (filterType) {
                     case 'text':
                         const normalizedCell = normalizeText(cellValue.toString());
-                        const normalizedValue = normalizeText(value);
+                        const normalizedValue = normalizeText(value.toString());
                         if (condition === 'equals' || condition === 'not_equals') {
                             matches = normalizedCell === normalizedValue;
                         } else {
+                            // contains o not_contains
                             matches = normalizedCell.includes(normalizedValue);
                         }
                         break;
