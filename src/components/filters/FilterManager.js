@@ -2442,7 +2442,9 @@ function applyFilters() {
             // Debug log para verificar condiciones NOT
             if (condition === 'not_contains' || condition === 'not_equals') {
                 console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
+                console.log(`🔍 Total rows before NOT filter:`, filteredData.length);
             }
+            const beforeCount = filteredData.length;
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) {
@@ -2588,6 +2590,10 @@ function applyFilters() {
                 // Para condiciones normales (contains, equals), devolver matches tal cual
                 return matches;
             });
+            // Debug log después del filtro NOT
+            if (condition === 'not_contains' || condition === 'not_equals') {
+                console.log(`🔍 Total rows after NOT filter:`, filteredData.length, 'removed:', beforeCount - filteredData.length);
+            }
         }
     });
 
