@@ -1820,6 +1820,13 @@ function generateFilterSidebar(headers) {
             updateInputSummary();
           });
           function updateInputSummary() {
+            // Solo actualizar el input del dropdown si no hay un valor en el textInput
+            const textInputValue = textInput ? textInput.value.trim() : '';
+            if (textInputValue) {
+              // Si hay un valor en el textInput, no actualizar el input del dropdown
+              return;
+            }
+            
             const selected = Array.from(selectedSet).filter(v => v !== '__EMPTY__');
             if (selectedSet.has('__EMPTY__')) {
               input.value = '(Empty)';
