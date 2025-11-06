@@ -2432,7 +2432,11 @@ function applyFilters() {
             return;
         } else {
             const value = moduleFilterValues[column];
-            if (!value || (Array.isArray(value) && value.length === 0)) return;
+            // Verificar que el valor existe y no está vacío
+            if (!value) return;
+            if (Array.isArray(value) && value.length === 0) return;
+            if (typeof value === 'string' && value.trim() === '') return;
+            
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
             console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
             filteredData = filteredData.filter(row => {
