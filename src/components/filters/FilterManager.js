@@ -2513,8 +2513,10 @@ function applyFilters() {
                     // Para arrays: verificar si el valor de la celda está en el array
                     // Tratar __EMPTY__ como valor vacío
                     if (isEmpty) {
+                        // Si la celda está vacía, coincide si el array incluye __EMPTY__
                         matches = value.includes('__EMPTY__');
                     } else {
+                        // Si la celda tiene valor, verificar si está en el array
                         matches = value.includes(cellValueStr);
                     }
                 } else if (typeof value === 'string') {
@@ -2535,7 +2537,10 @@ function applyFilters() {
                 // APLICAR NEGACIÓN SIMPLE: si es NOT, negar el resultado
                 if (condition === 'not_contains' || condition === 'not_equals') {
                     const shouldPass = !matches;
-                    if (condition === 'not_contains' || condition === 'not_equals') {
+                    // Debug detallado para arrays con __EMPTY__
+                    if (Array.isArray(value) && value.includes('__EMPTY__')) {
+                        console.log(`🔍   Array with __EMPTY__: cellValue="${cellValueStr}", isEmpty=${isEmpty}, matches=${matches}, NOT => shouldPass=${shouldPass}`);
+                    } else {
                         console.log(`🔍   cellValue="${cellValueStr}", matches=${matches}, NOT => shouldPass=${shouldPass}`);
                     }
                     return shouldPass;
