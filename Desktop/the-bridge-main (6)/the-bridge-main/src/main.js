@@ -3142,6 +3142,12 @@ function applyDashboardQuickFilters() {
     if (filterObj) {
       for (const key in filterObj.filterValues) {
         const value = filterObj.filterValues[key];
+        // Copiar también las condiciones (_condition)
+        if (key.endsWith('_condition')) {
+          // Si ya existe una condición, mantener la del último filtro aplicado
+          combinedFilterValues[key] = value;
+          continue;
+        }
         if (combinedFilterValues[key]) {
           if (Array.isArray(combinedFilterValues[key]) || Array.isArray(value)) {
             const arr1 = Array.isArray(combinedFilterValues[key]) ? combinedFilterValues[key] : [combinedFilterValues[key]];
@@ -6543,6 +6549,12 @@ function applyOpsHubQuickFilters() {
       
       for (const key in savedFilterValues) {
         const value = savedFilterValues[key];
+        // Copiar también las condiciones (_condition)
+        if (key.endsWith('_condition')) {
+          // Si ya existe una condición, mantener la del último filtro aplicado
+          combinedFilterValues[key] = value;
+          continue;
+        }
         if (combinedFilterValues[key]) {
           if (Array.isArray(combinedFilterValues[key]) || Array.isArray(value)) {
             const arr1 = Array.isArray(combinedFilterValues[key]) ? combinedFilterValues[key] : [combinedFilterValues[key]];
@@ -6582,6 +6594,12 @@ function applyOpsHubQuickFilters() {
       const [, filterObj] = entry;
       for (const key in filterObj.filterValues) {
         const value = filterObj.filterValues[key];
+        // Copiar también las condiciones (_condition)
+        if (key.endsWith('_condition')) {
+          // Si ya existe una condición, mantener la del último filtro aplicado
+          combinedFilterValues[key] = value;
+          continue;
+        }
         if (combinedFilterValues[key]) {
           if (Array.isArray(combinedFilterValues[key]) || Array.isArray(value)) {
             const arr1 = Array.isArray(combinedFilterValues[key]) ? combinedFilterValues[key] : [combinedFilterValues[key]];

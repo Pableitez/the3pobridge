@@ -251,6 +251,12 @@ class AnalyticsDashboard {
         if (filterObj && filterObj.filterValues) {
           Object.keys(filterObj.filterValues).forEach(key => {
             const value = filterObj.filterValues[key];
+            // Copiar también las condiciones (_condition)
+            if (key.endsWith('_condition')) {
+              // Si ya existe una condición, mantener la del último filtro aplicado
+              combinedFilterValues[key] = value;
+              return;
+            }
             if (combinedFilterValues[key]) {
               // Combinar valores si ya existe
               if (Array.isArray(combinedFilterValues[key]) || Array.isArray(value)) {
