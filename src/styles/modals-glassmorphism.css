@@ -1106,29 +1106,6 @@ html body #filterModal .filter-btn.empty-toggle.active {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
 }
 
-/* Estilos para botón No Empty - mismo formato que Empty pero con colores diferentes */
-html body #filterModal .filter-btn.no-empty-toggle {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%) !important;
-  color: #10B981 !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-  border-radius: 4px !important;
-}
-
-html body #filterModal .filter-btn.no-empty-toggle:hover {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.2) 100%) !important;
-  border-color: rgba(16, 185, 129, 0.5) !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
-  border-radius: 4px !important;
-}
-
-html body #filterModal .filter-btn.no-empty-toggle.active {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.3) 100%) !important;
-  color: #059669 !important;
-  border-color: rgba(16, 185, 129, 0.6) !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
-  border-radius: 4px !important;
-}
-
 html body #filterModal .filter-btn.today-toggle {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%) !important;
   color: #10B981 !important;

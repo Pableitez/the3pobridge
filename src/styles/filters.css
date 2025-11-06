@@ -1774,8 +1774,7 @@ html body #filterModal .modal-header[style] {
 
 .date-today-btn,
 .date-offset-btn,
-.empty-toggle-btn,
-.no-empty-toggle-btn {
+.empty-toggle-btn {
   padding: 0.28rem 0.7rem !important;
   min-width: 36px;
   min-height: 24px;
@@ -2328,8 +2327,7 @@ html body #filterModal .modal-header[style] {
   color: rgba(255, 255, 255, 0.5) !important;
 }
 
-.empty-toggle-btn,
-.no-empty-toggle-btn {
+.empty-toggle-btn {
   text-transform: none !important;
   font-size: 0.82rem !important;
   letter-spacing: 0.01em !important;
@@ -2342,15 +2340,13 @@ html body #filterModal .modal-header[style] {
   font-weight: 500 !important;
 }
 
-.empty-toggle-btn.active,
-.no-empty-toggle-btn.active {
+.empty-toggle-btn.active {
   background: #47B2E5 !important;
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(71, 178, 229, 0.3);
 }
 
-.empty-toggle-btn:hover,
-.no-empty-toggle-btn:hover {
+.empty-toggle-btn:hover {
   background: rgba(71, 178, 229, 0.3) !important;
   color: #ffffff !important;
   transform: translateY(-1px);
@@ -2462,22 +2458,18 @@ html body #filterModal .modal-filter-dropdown-btn:hover {
   color: #ffffff !important;
 }
 
-html body #filterModal .empty-toggle-btn,
-html body #filterModal .no-empty-toggle-btn {
+html body #filterModal .empty-toggle-btn {
   background: rgba(71, 178, 229, 0.2) !important;
   border: 1px solid rgba(71, 178, 229, 0.3) !important;
   color: #47B2E5 !important;
-  border-radius: 4px !important;
 }
 
-html body #filterModal .empty-toggle-btn:hover,
-html body #filterModal .no-empty-toggle-btn:hover {
+html body #filterModal .empty-toggle-btn:hover {
   background: rgba(71, 178, 229, 0.3) !important;
   color: #ffffff !important;
 }
 
-html body #filterModal .empty-toggle-btn.active,
-html body #filterModal .no-empty-toggle-btn.active {
+html body #filterModal .empty-toggle-btn.active {
   background: #47B2E5 !important;
   color: #ffffff !important;
 }
@@ -2491,16 +2483,13 @@ html body #filterModal .modal-filter-dropdown-wrapper * {
 
 /* Excepciones para botones */
 html body #filterModal .modal-filter-dropdown-btn,
-html body #filterModal .empty-toggle-btn,
-html body #filterModal .no-empty-toggle-btn {
+html body #filterModal .empty-toggle-btn {
   color: #47B2E5 !important;
 }
 
 html body #filterModal .modal-filter-dropdown-btn:hover,
 html body #filterModal .empty-toggle-btn:hover,
-html body #filterModal .empty-toggle-btn.active,
-html body #filterModal .no-empty-toggle-btn:hover,
-html body #filterModal .no-empty-toggle-btn.active {
+html body #filterModal .empty-toggle-btn.active {
   color: #ffffff !important;
 }
 
@@ -2516,8 +2505,7 @@ html body #filterModal .date-input-controls {
   margin-top: 0rem !important;
 }
 
-html body #filterModal .empty-toggle-btn,
-html body #filterModal .no-empty-toggle-btn {
+html body #filterModal .empty-toggle-btn {
   width: 90% !important;
   max-width: 240px !important;
   margin-left: auto !important;

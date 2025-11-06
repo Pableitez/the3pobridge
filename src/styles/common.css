@@ -11,11 +11,11 @@
   --secondary-color: var(--brand-light-blue);
   --accent-color: var(--brand-sky-blue);
   --background-light: var(--brand-cyan);
-  --text-color: #E8F4F8;
+  --text-color: #2C3E50;
   --text-light: #FFFFFF;
-  --border-color: #334155;
-  --background-color: #0F172A;
-  --hover-color: #1E293B;
+  --border-color: #E5E7EB;
+  --background-color: #FFFFFF;
+  --hover-color: #F3F4F6;
   --error-color: #EF4444;
   --success-color: #10B981;
   --warning-color: #F59E0B;
