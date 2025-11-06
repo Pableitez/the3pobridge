@@ -514,39 +514,49 @@ function generateFilterSidebar(headers) {
         summaryContainer.style.height = '';
         summaryContainer.style.minHeight = '';
       }
-      // Agrupa fechas y otros filtros
+      // Agrupa fechas
       const dateFilters = {};
-      const otherFilters = {};
-      const notFilters = new Set(); // Track NOT filters
-      
       Object.entries(filterValues).forEach(([key, value]) => {
-        if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty') || key.endsWith('_no_empty')) {
-          const baseKey = key.replace(/_(start|end|empty|no_empty)$/, '');
+        if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
+          const baseKey = key.replace(/_(start|end|empty)$/, '');
           if (!dateFilters[baseKey]) {
-            dateFilters[baseKey] = { start: '', end: '', empty: false, noEmpty: false };
+            dateFilters[baseKey] = { start: '', end: '', empty: false };
           }
           if (key.endsWith('_start')) dateFilters[baseKey].start = value;
           if (key.endsWith('_end')) dateFilters[baseKey].end = value;
           if (key.endsWith('_empty')) dateFilters[baseKey].empty = value;
-          if (key.endsWith('_no_empty')) dateFilters[baseKey].noEmpty = value;
-        } else if (key.endsWith('_not')) {
-          // Track NOT filters
-          const baseKey = key.replace('_not', '');
-          notFilters.add(baseKey);
-        } else {
-          otherFilters[key] = value;
         }
       });
-      // Chips de fechas - OCULTAR TODOS del modal
-      // NO mostrar ningún filtro dentro del modal
-      // Object.entries(dateFilters).forEach(([column, filter]) => {
-      //   // Comentado - no mostrar filtros en el modal
-      // });
-      // Chips de otros filtros - OCULTAR TODOS del modal
-      // NO mostrar ningún filtro dentro del modal
-      // Object.entries(otherFilters).forEach(([column, values]) => {
-      //   // Comentado - no mostrar filtros en el modal
-      // });
+      // Chips de fechas
+      Object.entries(dateFilters).forEach(([column, filter]) => {
+        if (filter.start || filter.end || filter.empty) {
+          let text = `${column}: `;
+          if (filter.empty && !filter.start && !filter.end) {
+            text += '(empty)';
+          } else {
+            if (filter.start) text += `from ${prettyDynamicDate(filter.start)}`;
+            if (filter.end) text += ` to ${prettyDynamicDate(filter.end)}`;
+            if (filter.empty) text += ' (including empty)';
+          }
+          const tag = document.createElement('div');
+          tag.className = 'modal-filter-tag';
+          tag.innerHTML = `<span>${text}</span><button class="modal-filter-tag-remove" data-column="${column}">×</button>`;
+          list.appendChild(tag);
+        }
+      });
+      // Chips de otros filtros
+      Object.entries(filterValues).forEach(([key, value]) => {
+        if (!key.endsWith('_start') && !key.endsWith('_end') && !key.endsWith('_empty') && !key.endsWith('_condition') && Array.isArray(value) && value.length > 0) {
+          const tag = document.createElement('div');
+          tag.className = 'modal-filter-tag';
+          // Obtener la condición para esta columna
+          const condition = filterValues[`${key}_condition`] || 'contains';
+          const conditionLabel = getConditionLabel(condition);
+          const conditionText = conditionLabel ? `${conditionLabel} ` : '';
+          tag.innerHTML = `<span>${conditionText}${key}: ${value.join(', ')}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
+          list.appendChild(tag);
+        }
+      });
       // Listeners para eliminar chips
       // Declarar activeFilters fuera del bucle para evitar duplicidad
       let activeFilters;
@@ -558,9 +568,8 @@ function generateFilterSidebar(headers) {
           delete updated[`${column}_start`];
           delete updated[`${column}_end`];
           delete updated[`${column}_empty`];
-          delete updated[`${column}_no_empty`];
-          delete updated[`${column}_not`];
           delete updated[column];
+          delete updated[`${column}_condition`];
           setModuleFilterValues(updated);
           // Eliminar de activeFilters SIEMPRE
           activeFilters = { ...getModuleActiveFilters() };
@@ -821,37 +830,6 @@ function generateFilterSidebar(headers) {
         document.querySelectorAll('.filter-checkbox').forEach(checkbox => { checkbox.checked = false; });
         document.querySelectorAll('.column-selector').forEach(select => { select.value = ''; });
         
-        // Limpiar filtros NOT específicos
-        document.querySelectorAll('.not-filter-checkbox').forEach(checkbox => {
-          checkbox.checked = false;
-          const column = checkbox.id.replace('not-filter-', '');
-          const label = document.querySelector(`label[for="not-filter-${column}"]`);
-          if (label) {
-            label.style.color = '#E8F4F8';
-            label.textContent = 'NOT (Exclude selected values)';
-          }
-        });
-        
-        // Limpiar botones Empty/No Empty
-        document.querySelectorAll('.empty-toggle-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.no-empty-toggle-btn').forEach(btn => btn.classList.remove('active'));
-        
-        // Limpiar campos de entrada manual
-        document.querySelectorAll('.manual-filter-input').forEach(input => {
-          input.value = '';
-          input.style.display = 'none';
-        });
-        
-        // Limpiar botones de entrada manual
-        document.querySelectorAll('.apply-manual-btn, .clear-manual-btn').forEach(btn => {
-          btn.style.display = 'none';
-        });
-        
-        // Resetear botones Add Filter
-        document.querySelectorAll('.add-filter-btn').forEach(btn => {
-          btn.textContent = '+ Add Filter';
-        });
-        
         // Remove active class from all filter items (don't remove the items themselves)
         document.querySelectorAll('.filter-item').forEach(item => { 
           item.classList.remove('active'); 
@@ -969,6 +947,7 @@ function generateFilterSidebar(headers) {
           delete updated[`${selectedColumn}_end`];
           delete updated[`${selectedColumn}_empty`];
           delete updated[selectedColumn];
+          delete updated[`${selectedColumn}_condition`];
           setModuleFilterValues(updated);
           
           // Eliminar de activeFilters
@@ -1233,39 +1212,6 @@ function generateFilterSidebar(headers) {
             applyFilters();
             renderActiveFiltersSummaryChips();
           });
-          // No Empty button
-          const noEmptyBtn = document.createElement('button');
-          noEmptyBtn.type = 'button';
-          noEmptyBtn.className = 'no-empty-toggle-btn';
-          noEmptyBtn.textContent = 'No Empty';
-          if (getModuleFilterValues()[`${selectedColumn}_no_empty`]) noEmptyBtn.classList.add('active');
-          noEmptyBtn.addEventListener('click', () => {
-            const key = `${selectedColumn}_no_empty`;
-            if (getModuleFilterValues()[key]) {
-              const updated = { ...getModuleFilterValues() };
-              delete updated[key];
-              setModuleFilterValues(updated);
-              noEmptyBtn.classList.remove('active');
-              // Si no hay ningún filtro de fecha activo, eliminar de activeFilters
-              if (!getModuleFilterValues()[`${selectedColumn}_start`] && 
-                  !getModuleFilterValues()[`${selectedColumn}_end`] &&
-                  !getModuleFilterValues()[`${selectedColumn}_empty`]) {
-                const activeFilters = { ...getModuleActiveFilters() };
-                delete activeFilters[selectedColumn];
-                setModuleActiveFilters(activeFilters);
-                filterDiv.classList.remove('active');
-              }
-            } else {
-              setModuleFilterValues({ ...getModuleFilterValues(), [key]: true });
-              // Asegurar que el tipo 'date' está en activeFilters
-              setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: 'date' });
-              noEmptyBtn.classList.add('active');
-              filterDiv.classList.add('active');
-            }
-            updateActiveFiltersSummary();
-            applyFilters();
-            renderActiveFiltersSummaryChips();
-          });
           // Listeners para los inputs de fecha
           [startInput, endInput].forEach(inputEl => {
             inputEl.addEventListener("change", debounce(() => {
@@ -1330,7 +1276,6 @@ function generateFilterSidebar(headers) {
           inputWrapper.appendChild(startGroup);
           inputWrapper.appendChild(endGroup);
           inputWrapper.appendChild(emptyBtn);
-          inputWrapper.appendChild(noEmptyBtn);
           filterDiv.appendChild(inputWrapper);
         } else {
           // Filtro tipo Excel para todos los campos que no sean fecha
@@ -1358,6 +1303,59 @@ function generateFilterSidebar(headers) {
           if (type === 'date') {
             uniqueValues = uniqueValues.map(val => toISODateString(val));
           }
+          
+          // Crear selector de condición
+          const conditionWrapper = document.createElement('div');
+          conditionWrapper.className = 'filter-condition-wrapper';
+          conditionWrapper.style.marginBottom = '0.5rem';
+          
+          const conditionSelect = document.createElement('select');
+          conditionSelect.className = 'filter-condition-select';
+          conditionSelect.style.width = '100%';
+          conditionSelect.style.padding = '0.4rem';
+          conditionSelect.style.borderRadius = '4px';
+          conditionSelect.style.border = '1px solid var(--border-color)';
+          conditionSelect.style.backgroundColor = '#1a2332';
+          conditionSelect.style.color = '#ffffff';
+          conditionSelect.style.fontSize = '0.9rem';
+          
+          // Opciones de condición
+          const conditions = [
+            { value: 'contains', label: 'Contains' },
+            { value: 'equals', label: 'Equals' },
+            { value: 'not_contains', label: 'Not Contains' },
+            { value: 'not_equals', label: 'Not Equals' }
+          ];
+          
+          conditions.forEach(cond => {
+            const option = document.createElement('option');
+            option.value = cond.value;
+            option.textContent = cond.label;
+            conditionSelect.appendChild(option);
+          });
+          
+          // Cargar condición guardada si existe
+          const savedCondition = getModuleFilterValues()[`${selectedColumn}_condition`] || 'contains';
+          conditionSelect.value = savedCondition;
+          
+          // Guardar condición cuando cambie
+          conditionSelect.addEventListener('change', () => {
+            const key = `${selectedColumn}_condition`;
+            const newCondition = conditionSelect.value;
+            console.log(`🔧 Condition changed for column "${selectedColumn}": "${newCondition}"`);
+            const currentValues = { ...getModuleFilterValues() };
+            currentValues[key] = newCondition;
+            setModuleFilterValues(currentValues);
+            console.log(`🔧 Saved condition for "${selectedColumn}":`, currentValues[key]);
+            // Reaplicar filtros con la nueva condición
+            applyFilters();
+            updateActiveFiltersSummary();
+            renderActiveFiltersSummaryChips();
+          });
+          
+          conditionWrapper.appendChild(conditionSelect);
+          filterDiv.appendChild(conditionWrapper);
+          
           const dropdownWrapper = document.createElement('div');
           dropdownWrapper.className = 'modal-filter-dropdown-wrapper';
           dropdownWrapper.style.position = 'relative';
@@ -1496,7 +1494,18 @@ function generateFilterSidebar(headers) {
               filteredValues.forEach(val => {
                 if (val !== '') selectedSet.add(val);
               });
-              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+              // Preservar la condición al actualizar los valores
+              const currentValues = { ...getModuleFilterValues() };
+              currentValues[selectedColumn] = Array.from(selectedSet);
+              // Asegurar que la condición se preserve
+              const conditionKey = `${selectedColumn}_condition`;
+              if (currentValues[conditionKey]) {
+                // La condición ya existe, mantenerla
+              } else {
+                // Si no existe, usar 'contains' por defecto
+                currentValues[conditionKey] = 'contains';
+              }
+              setModuleFilterValues(currentValues);
               filterDiv.classList.add('active');
               renderCheckboxList();
               updateActiveFiltersSummary();
@@ -1537,41 +1546,25 @@ function generateFilterSidebar(headers) {
                 selectedSet.add('__EMPTY__');
                 emptyBtn2.classList.add('active');
               }
-              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+              // Preservar la condición al actualizar los valores
+              const currentValues = { ...getModuleFilterValues() };
+              currentValues[selectedColumn] = Array.from(selectedSet);
+              // Asegurar que la condición se preserve
+              const conditionKey = `${selectedColumn}_condition`;
+              if (currentValues[conditionKey]) {
+                // La condición ya existe, mantenerla
+              } else {
+                // Si no existe, usar 'contains' por defecto
+                currentValues[conditionKey] = 'contains';
+              }
+              setModuleFilterValues(currentValues);
               setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
               filterDiv.classList.toggle('active', selectedSet.size > 0);
               updateActiveFiltersSummary();
+              applyFilters();
               updateInputSummary();
             });
             list.appendChild(emptyBtn2);
-            
-            // No Empty button for Excel filters
-            const noEmptyBtn2 = document.createElement('button');
-            noEmptyBtn2.type = 'button';
-            noEmptyBtn2.className = 'no-empty-toggle-btn';
-            noEmptyBtn2.textContent = '(No Empty)';
-            noEmptyBtn2.style.color = '#47B2E5';
-            noEmptyBtn2.style.background = 'rgba(71, 178, 229, 0.2)';
-            noEmptyBtn2.style.border = '1px solid rgba(71, 178, 229, 0.3)';
-            if (selectedSet.has('__NO_EMPTY__')) noEmptyBtn2.classList.add('active');
-            noEmptyBtn2.addEventListener('click', () => {
-              if (selectedSet.has('__NO_EMPTY__')) {
-                selectedSet.delete('__NO_EMPTY__');
-                noEmptyBtn2.classList.remove('active');
-              } else {
-                selectedSet.add('__NO_EMPTY__');
-                noEmptyBtn2.classList.add('active');
-              }
-              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
-              setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
-              filterDiv.classList.toggle('active', selectedSet.size > 0);
-              updateActiveFiltersSummary();
-              updateInputSummary();
-              // Apply filters immediately when No Empty is toggled
-              applyFilters();
-              renderActiveFiltersSummaryChips();
-            });
-            list.appendChild(noEmptyBtn2);
             const MAX_OPTIONS = 200;
             filteredValues = uniqueValues;
             if (filterTerm) {
@@ -1607,10 +1600,22 @@ function generateFilterSidebar(headers) {
                 } else {
                   selectedSet.delete(val);
                 }
-                setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+                // Preservar la condición al actualizar los valores
+                const currentValues = { ...getModuleFilterValues() };
+                currentValues[selectedColumn] = Array.from(selectedSet);
+                // Asegurar que la condición se preserve
+                const conditionKey = `${selectedColumn}_condition`;
+                if (currentValues[conditionKey]) {
+                  // La condición ya existe, mantenerla
+                } else {
+                  // Si no existe, usar 'contains' por defecto
+                  currentValues[conditionKey] = 'contains';
+                }
+                setModuleFilterValues(currentValues);
                 setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
                 filterDiv.classList.toggle('active', selectedSet.size > 0);
                 updateActiveFiltersSummary();
+                applyFilters();
                 updateInputSummary();
               });
               
@@ -1689,193 +1694,7 @@ function generateFilterSidebar(headers) {
             selectedSet = new Set(getModuleFilterValues()[selectedColumn]);
             updateInputSummary();
           }
-          
-          // NOT Filter toggle
-          const notFilterContainer = document.createElement('div');
-          notFilterContainer.className = 'not-filter-container';
-          notFilterContainer.style.marginBottom = '0.5rem';
-          notFilterContainer.style.display = 'flex';
-          notFilterContainer.style.alignItems = 'center';
-          notFilterContainer.style.gap = '0.5rem';
-          
-          const notFilterCheckbox = document.createElement('input');
-          notFilterCheckbox.type = 'checkbox';
-          notFilterCheckbox.className = 'not-filter-checkbox';
-          notFilterCheckbox.id = `not-filter-${selectedColumn}`;
-          notFilterCheckbox.style.margin = '0';
-          notFilterCheckbox.style.cursor = 'pointer';
-          
-          const notFilterLabel = document.createElement('label');
-          notFilterLabel.htmlFor = `not-filter-${selectedColumn}`;
-          notFilterLabel.textContent = 'NOT (Exclude selected values)';
-          notFilterLabel.style.color = '#E8F4F8';
-          notFilterLabel.style.fontSize = '0.8rem';
-          notFilterLabel.style.cursor = 'pointer';
-          notFilterLabel.style.userSelect = 'none';
-          
-          notFilterContainer.appendChild(notFilterCheckbox);
-          notFilterContainer.appendChild(notFilterLabel);
-          
-          // Initialize NOT checkbox state from saved values
-          const notKey = `${selectedColumn}_not`;
-          const savedNotValue = getModuleFilterValues()[notKey];
-          if (savedNotValue) {
-            notFilterCheckbox.checked = true;
-            notFilterLabel.style.color = '#ff6b6b';
-            notFilterLabel.textContent = 'NOT (Exclude selected values) ✓';
-          }
-          
-          // Add Filter functionality
-          const addFilterContainer = document.createElement('div');
-          addFilterContainer.className = 'add-filter-container';
-          addFilterContainer.style.marginTop = '0.5rem';
-          addFilterContainer.style.padding = '0.5rem';
-          addFilterContainer.style.border = '1px solid rgba(71, 178, 229, 0.3)';
-          addFilterContainer.style.borderRadius = '4px';
-          addFilterContainer.style.background = 'rgba(71, 178, 229, 0.05)';
-          
-          const addFilterBtn = document.createElement('button');
-          addFilterBtn.type = 'button';
-          addFilterBtn.className = 'add-filter-btn';
-          addFilterBtn.textContent = '+ Add Filter';
-          addFilterBtn.style.background = 'rgba(71, 178, 229, 0.2)';
-          addFilterBtn.style.color = '#47B2E5';
-          addFilterBtn.style.border = '1px solid rgba(71, 178, 229, 0.3)';
-          addFilterBtn.style.borderRadius = '4px';
-          addFilterBtn.style.padding = '0.3rem 0.6rem';
-          addFilterBtn.style.fontSize = '0.8rem';
-          addFilterBtn.style.marginRight = '0.5rem';
-          addFilterBtn.style.cursor = 'pointer';
-          
-          const manualInput = document.createElement('input');
-          manualInput.type = 'text';
-          manualInput.className = 'manual-filter-input';
-          manualInput.placeholder = '"value1", "value2" or value1, value2';
-          manualInput.title = 'Format examples:\n• "value1", "value2" (with quotes for spaces)\n• value1, value2 (comma separated)\n• value1; value2 (semicolon separated)\n• value1 | value2 (pipe separated)\n• Single value: value1';
-          manualInput.style.width = 'calc(100% - 100px)';
-          manualInput.style.padding = '0.3rem 0.5rem';
-          manualInput.style.border = '1px solid rgba(71, 178, 229, 0.3)';
-          manualInput.style.borderRadius = '4px';
-          manualInput.style.background = 'rgba(255, 255, 255, 0.1)';
-          manualInput.style.color = '#E8F4F8';
-          manualInput.style.fontSize = '0.8rem';
-          manualInput.style.display = 'none';
-          
-          const applyManualBtn = document.createElement('button');
-          applyManualBtn.type = 'button';
-          applyManualBtn.className = 'apply-manual-btn';
-          applyManualBtn.textContent = 'Apply';
-          applyManualBtn.style.background = '#47B2E5';
-          applyManualBtn.style.color = '#ffffff';
-          applyManualBtn.style.border = 'none';
-          applyManualBtn.style.borderRadius = '4px';
-          applyManualBtn.style.padding = '0.3rem 0.6rem';
-          applyManualBtn.style.fontSize = '0.8rem';
-          applyManualBtn.style.marginLeft = '0.3rem';
-          applyManualBtn.style.cursor = 'pointer';
-          applyManualBtn.style.display = 'none';
-          
-          const clearManualBtn = document.createElement('button');
-          clearManualBtn.type = 'button';
-          clearManualBtn.className = 'clear-manual-btn';
-          clearManualBtn.textContent = 'Clear';
-          clearManualBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-          clearManualBtn.style.color = '#E8F4F8';
-          clearManualBtn.style.border = '1px solid rgba(255, 255, 255, 0.3)';
-          clearManualBtn.style.borderRadius = '4px';
-          clearManualBtn.style.padding = '0.3rem 0.6rem';
-          clearManualBtn.style.fontSize = '0.8rem';
-          clearManualBtn.style.marginLeft = '0.3rem';
-          clearManualBtn.style.cursor = 'pointer';
-          clearManualBtn.style.display = 'none';
-          
-          // Event listeners
-          addFilterBtn.addEventListener('click', () => {
-            if (manualInput.style.display === 'none') {
-              manualInput.style.display = 'inline-block';
-              applyManualBtn.style.display = 'inline-block';
-              clearManualBtn.style.display = 'inline-block';
-              addFilterBtn.textContent = '− Hide';
-              manualInput.focus();
-            } else {
-              manualInput.style.display = 'none';
-              applyManualBtn.style.display = 'none';
-              clearManualBtn.style.display = 'none';
-              addFilterBtn.textContent = '+ Add Filter';
-              manualInput.value = '';
-            }
-          });
-          
-          applyManualBtn.addEventListener('click', () => {
-            const manualValues = parseManualValues(manualInput.value);
-            if (manualValues.length > 0) {
-              // Add manual values to the existing filter
-              const currentValues = Array.from(selectedSet);
-              const newValues = [...currentValues, ...manualValues];
-              selectedSet = new Set(newValues);
-              
-              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
-              setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
-              filterDiv.classList.add('active');
-              updateActiveFiltersSummary();
-              applyFilters();
-              renderActiveFiltersSummaryChips();
-              
-              // Update the dropdown display
-              updateInputSummary();
-              
-              // Clear manual input
-              manualInput.value = '';
-              manualInput.style.display = 'none';
-              applyManualBtn.style.display = 'none';
-              clearManualBtn.style.display = 'none';
-              addFilterBtn.textContent = '+ Add Filter';
-            }
-          });
-          
-          clearManualBtn.addEventListener('click', () => {
-            manualInput.value = '';
-            manualInput.style.display = 'none';
-            applyManualBtn.style.display = 'none';
-            clearManualBtn.style.display = 'none';
-            addFilterBtn.textContent = '+ Add Filter';
-          });
-          
-          // NOT Filter event listener
-          notFilterCheckbox.addEventListener('change', () => {
-            const isNotFilter = notFilterCheckbox.checked;
-            const key = `${selectedColumn}_not`;
-            
-            if (isNotFilter) {
-              setModuleFilterValues({ ...getModuleFilterValues(), [key]: true });
-            } else {
-              const updated = { ...getModuleFilterValues() };
-              delete updated[key];
-              setModuleFilterValues(updated);
-            }
-            
-            // Update visual state
-            if (isNotFilter) {
-              notFilterLabel.style.color = '#ff6b6b';
-              notFilterLabel.textContent = 'NOT (Exclude selected values) ✓';
-            } else {
-              notFilterLabel.style.color = '#E8F4F8';
-              notFilterLabel.textContent = 'NOT (Exclude selected values)';
-            }
-            
-            updateActiveFiltersSummary();
-            applyFilters();
-            renderActiveFiltersSummaryChips();
-          });
-          
-          addFilterContainer.appendChild(addFilterBtn);
-          addFilterContainer.appendChild(manualInput);
-          addFilterContainer.appendChild(applyManualBtn);
-          addFilterContainer.appendChild(clearManualBtn);
-          
           filterDiv.appendChild(dropdownWrapper);
-          filterDiv.appendChild(notFilterContainer);
-          filterDiv.appendChild(addFilterContainer);
         }
         filterGrid.appendChild(filterDiv);
       });
@@ -1933,18 +1752,7 @@ function generateFilterSidebar(headers) {
     function updateActiveFiltersSummary() {
       const list = document.getElementById('globalActiveFiltersSummary');
       if (!list) return;
-      
-      // OCULTAR TODOS los filtros del modal - no mostrar nada
       list.innerHTML = '';
-      list.style.display = 'none';
-      list.style.padding = '0';
-      list.style.margin = '0';
-      list.style.height = '0';
-      list.style.minHeight = '0';
-      return;
-      
-      // Código comentado - no mostrar filtros en el modal
-      /*
       const filterValues = getModuleFilterValues();
       if (Object.keys(filterValues).length === 0) {
         // Hide the container completely when empty
@@ -1962,9 +1770,6 @@ function generateFilterSidebar(headers) {
         list.style.height = '';
         list.style.minHeight = '';
       }
-      
-      // Código comentado - no mostrar filtros en el modal
-      /*
       // Group filters by type
       const dateFilters = {};
       const otherFilters = {};
@@ -2006,17 +1811,17 @@ function generateFilterSidebar(headers) {
         if (Array.isArray(values) && values.length > 0) {
           const tag = document.createElement('div');
           tag.className = 'modal-filter-tag';
+          // Obtener la condición para esta columna
+          const condition = filterValues[`${column}_condition`] || 'contains';
+          const conditionLabel = getConditionLabel(condition);
+          const conditionText = conditionLabel ? `${conditionLabel} ` : '';
           tag.innerHTML = `
-            <span>${column}: ${values.join(', ')}</span>
+            <span>${conditionText}${column}: ${values.join(', ')}</span>
             <button class="modal-filter-tag-remove" data-column="${column}">×</button>
           `;
           list.appendChild(tag);
         }
       });
-      */
-      
-      // Código comentado - no mostrar filtros en el modal
-      /*
       // Add remove functionality to tags
       list.querySelectorAll('.modal-filter-tag-remove').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2026,9 +1831,8 @@ function generateFilterSidebar(headers) {
             delete updated[`${column}_start`];
             delete updated[`${column}_end`];
             delete updated[`${column}_empty`];
-            delete updated[`${column}_no_empty`];
-            delete updated[`${column}_not`];
           delete updated[column];
+          delete updated[`${column}_condition`];
             setModuleFilterValues(updated);
           // Eliminar de activeFilters SIEMPRE
           const activeFilters = { ...getModuleActiveFilters() };
@@ -2048,7 +1852,6 @@ function generateFilterSidebar(headers) {
           applyFilters();
         });
       });
-      */
     }
 
     // Call updateActiveFiltersSummary after each filter change
@@ -2138,13 +1941,24 @@ function generateFilterSidebar(headers) {
             newActiveFilters[base] = 'date';
           } else if (Array.isArray(filterObj.filterValues[key])) {
             newActiveFilters[key] = 'categorical';
-          } else if (!key.endsWith('_not')) {
-            // Skip _not keys when reconstructing activeFilters (they're just flags)
+          } else {
             newActiveFilters[key] = 'text';
           }
         }
         setModuleActiveFilters(newActiveFilters);
         generateFilterSidebar(headers);
+        // Restaurar condiciones en los selectores después de regenerar el sidebar
+        setTimeout(() => {
+          Object.keys(filterObj.filterValues).forEach(key => {
+            if (key.endsWith('_condition')) {
+              const column = key.replace('_condition', '');
+              const conditionSelect = document.querySelector(`.filter-item[data-column="${column}"] .filter-condition-select`);
+              if (conditionSelect) {
+                conditionSelect.value = filterObj.filterValues[key];
+              }
+            }
+          });
+        }, 100);
         // Forzar que la pestaña y panel de My Filters estén activos
         const myFiltersTab = document.querySelector('.filter-tab[data-target="myfilters"]');
         const myFiltersPanel = document.getElementById('myfiltersFilterPanel');
@@ -2252,12 +2066,6 @@ function generateFilterSidebar(headers) {
           const quickFilters = loadQuickFilters();
           const filterObj = quickFilters[name];
           if (filterObj) {
-            // Debug: Check for NOT states in saved filter
-            const notStates = Object.keys(filterObj.filterValues).filter(key => key.endsWith('_not'));
-            if (notStates.length > 0) {
-              console.log(`[applyQuickFilter] Applying quick filter "${name}" with NOT states:`, notStates);
-            }
-            
             setModuleFilterValues({ ...filterObj.filterValues });
             // Reconstruir activeFilters
             const newActiveFilters = {};
@@ -2267,15 +2075,11 @@ function generateFilterSidebar(headers) {
                 newActiveFilters[base] = 'date';
               } else if (Array.isArray(filterObj.filterValues[key])) {
                 newActiveFilters[key] = 'categorical';
-              } else if (!key.endsWith('_not')) {
-                // Skip _not keys when reconstructing activeFilters (they're just flags)
+              } else {
                 newActiveFilters[key] = 'text';
               }
             }
             setModuleActiveFilters(newActiveFilters);
-            // Regenerate sidebar to restore NOT checkbox states
-            const headers = Object.keys(getOriginalData()[0] || {});
-            generateFilterSidebar(headers);
             applyFilters();
             renderActiveFiltersSummaryChips();
             // Cierra el modal de filtros si está abierto
@@ -2401,38 +2205,6 @@ function normalizeText(val) {
   return (val || "").toString().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim();
 }
 
-// Function to parse manual filter values
-function parseManualValues(input) {
-  if (!input || !input.trim()) return [];
-  
-  const trimmed = input.trim();
-  const values = [];
-  
-  // Handle different formats
-  if (trimmed.includes('"') && trimmed.includes(',')) {
-    // Format: "value1", "value2", "value3"
-    const matches = trimmed.match(/"([^"]+)"/g);
-    if (matches) {
-      values.push(...matches.map(match => match.replace(/"/g, '').trim()));
-    }
-  } else if (trimmed.includes(',')) {
-    // Format: value1, value2, value3
-    values.push(...trimmed.split(',').map(val => val.trim()).filter(val => val));
-  } else if (trimmed.includes(';')) {
-    // Format: value1; value2; value3
-    values.push(...trimmed.split(';').map(val => val.trim()).filter(val => val));
-  } else if (trimmed.includes('|')) {
-    // Format: value1 | value2 | value3
-    values.push(...trimmed.split('|').map(val => val.trim()).filter(val => val));
-  } else {
-    // Single value
-    values.push(trimmed);
-  }
-  
-  // Remove duplicates and empty values
-  return [...new Set(values.filter(val => val && val.trim()))];
-}
-
 function applyFilters() {
     const data = getOriginalData();
     const moduleActiveFilters = getModuleActiveFilters();
@@ -2450,14 +2222,9 @@ function applyFilters() {
 
     // Aplicar filtros del módulo
     Object.entries(moduleActiveFilters).forEach(([column, filterType]) => {
-        // Debug: Check if column has __NO_EMPTY__ in filterValues
-        const filterValue = moduleFilterValues[column];
-        if (Array.isArray(filterValue) && filterValue.includes('__NO_EMPTY__')) {
-            console.log(`[DEBUG] Column "${column}" has __NO_EMPTY__ filter. filterType: ${filterType}, value:`, filterValue);
-        }
         if (filterType === 'date') {
             const arr = Array.isArray(moduleFilterValues[column]) ? moduleFilterValues[column] : null;
-            const hasRange = moduleFilterValues[`${column}_start`] || moduleFilterValues[`${column}_end`] || moduleFilterValues[`${column}_empty`] || moduleFilterValues[`${column}_no_empty`];
+            const hasRange = moduleFilterValues[`${column}_start`] || moduleFilterValues[`${column}_end`] || moduleFilterValues[`${column}_empty`];
             if (arr && arr.length > 0) {
                 // Filtro Excel: solo los valores seleccionados
                 filteredData = filteredData.filter(row => arr.includes(row[column]));
@@ -2483,21 +2250,14 @@ function applyFilters() {
                     end = `${y}-${m}-${lastDay}`;
                 }
                 const empty = moduleFilterValues[`${column}_empty`];
-                const noEmpty = moduleFilterValues[`${column}_no_empty`];
                 filteredData = filteredData.filter(row => {
                     const value = row[column] ? row[column].trim() : "";
                     // Si solo está el filtro empty, mostrar SOLO vacíos
                     if (empty && !start && !end) {
                         return value === "" || value === null || value === undefined;
                     }
-                    // Si solo está el filtro no_empty, mostrar SOLO no vacíos
-                    if (noEmpty && !start && !end) {
-                        return value !== "" && value !== null && value !== undefined;
-                    }
                     // Si está empty + rango, mostrar vacíos o los que cumplen el rango
                     if (empty && (value === "" || value === null || value === undefined)) return true;
-                    // Si está no_empty + rango, mostrar no vacíos que cumplen el rango
-                    if (noEmpty && (value === "" || value === null || value === undefined)) return false;
                     if (!value) return false;
                     const cellDate = parseFlexibleDate(value);
                     if (!cellDate) return false;
@@ -2517,85 +2277,69 @@ function applyFilters() {
             return;
         } else {
             const value = moduleFilterValues[column];
-            const isNotFilter = moduleFilterValues[`${column}_not`];
-            // Allow filtering even if only __NO_EMPTY__ or __EMPTY__ is selected
-            if (!value) {
-                console.log(`[DEBUG] Column "${column}" has no value, skipping filter`);
-                return;
-            }
-            if (Array.isArray(value) && value.length === 0) {
-                console.log(`[DEBUG] Column "${column}" has empty array, skipping filter`);
-                return;
-            }
-            // Special case: if array only contains __NO_EMPTY__ or __EMPTY__, still apply filter
-            // This is important - we want to filter when only these markers are selected
-            if (Array.isArray(value)) {
-                const hasNoEmpty = value.includes('__NO_EMPTY__');
-                const hasEmpty = value.includes('__EMPTY__');
-                const hasRealValues = value.some(v => v !== '__NO_EMPTY__' && v !== '__EMPTY__');
-                // If we have special markers OR real values, continue filtering
-                if (!hasNoEmpty && !hasEmpty && !hasRealValues) {
-                    return; // No markers and no real values, skip this filter
-                }
-            }
+            if (!value || (Array.isArray(value) && value.length === 0)) return;
+            const condition = moduleFilterValues[`${column}_condition`] || 'contains';
+            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value);
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
-                
-                let matches = false;
-                if (Array.isArray(value)) {
-                    const isEmpty = cellValue === '' || cellValue === null || cellValue === undefined;
-                    
-                    // Handle __NO_EMPTY__ filter - MUST be checked first
-                    if (value.includes('__NO_EMPTY__')) {
-                        // If cell is empty, always exclude it when __NO_EMPTY__ is selected
-                        if (isEmpty) {
-                            matches = false;
-                        } else {
-                            // Cell is not empty
-                            // Get actual values (excluding special markers)
-                            const actualValues = value.filter(v => v !== '__NO_EMPTY__' && v !== '__EMPTY__');
-                            if (actualValues.length === 0) {
-                                // If ONLY __NO_EMPTY__ is selected (no other values), include ALL non-empty values
-                                matches = true;
-                            } else {
-                                // __NO_EMPTY__ + other values: cell must match one of the selected values
-                                matches = actualValues.includes(cellValue?.toString());
-                            }
-                        }
-                        // Debug log
-                        if (column === 'SAP Shipment Number S1' || column.includes('SAP')) {
-                            console.log(`[NO_EMPTY Filter] Column: ${column}, isEmpty: ${isEmpty}, cellValue: "${cellValue}", actualValues:`, actualValues, `matches: ${matches}`);
-                        }
+                if (cellValue === null || cellValue === undefined) {
+                    // Para condiciones NOT, los valores null/undefined pueden pasar
+                    if (condition === 'not_contains' || condition === 'not_equals') {
+                        return true;
                     }
-                    // Handle __EMPTY__ filter
-                    else if (value.includes('__EMPTY__') && isEmpty) {
-                        matches = true;
-                    }
-                    // Normal case: check if value is in the array
-                    else {
-                        matches = value.includes(cellValue?.toString());
-                    }
-                } else {
-                    switch (filterType) {
-                        case 'text':
-                            matches = normalizeText(cellValue.toString()).includes(normalizeText(value));
-                            break;
-                        case 'number':
-                            const numValue = parseFloat(value);
-                            const cellNum = parseFloat(cellValue);
-                            matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
-                            break;
-                        case 'categorical':
-                            const selectedValues = value.split(',').map(v => v.trim());
-                            matches = selectedValues.includes(cellValue.toString());
-                            break;
-                        default:
-                            matches = true;
-                    }
+                    return false;
                 }
-                
-                // Apply NOT logic: if NOT filter is active, invert the result
-                return isNotFilter ? !matches : matches;
+                if (Array.isArray(value)) {
+                    if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
+                        // Para condiciones NOT, si está vacío y buscamos empty, no debe pasar
+                        if (condition === 'not_contains' || condition === 'not_equals') {
+                            return false;
+                        }
+                        return true;
+                    }
+                    const isIncluded = value.includes(cellValue?.toString());
+                    // Aplicar condición NOT
+                    if (condition === 'not_contains' || condition === 'not_equals') {
+                        return !isIncluded;
+                    }
+                    return isIncluded;
+                }
+                let matches = false;
+                switch (filterType) {
+                    case 'text':
+                        const normalizedCell = normalizeText(cellValue.toString());
+                        const normalizedValue = normalizeText(value);
+                        if (condition === 'equals' || condition === 'not_equals') {
+                            matches = normalizedCell === normalizedValue;
+                        } else {
+                            matches = normalizedCell.includes(normalizedValue);
+                        }
+                        break;
+                    case 'number':
+                        const numValue = parseFloat(value);
+                        const cellNum = parseFloat(cellValue);
+                        matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+                        break;
+                    case 'categorical':
+                        const selectedValues = value.split(',').map(v => v.trim());
+                        matches = selectedValues.includes(cellValue.toString());
+                        break;
+                    default:
+                        matches = true;
+                }
+                // Aplicar condición NOT
+                // Si la condición es NOT, invertir el resultado
+                if (condition === 'not_contains' || condition === 'not_equals') {
+                    // matches = true significa que coincide, pero queremos los que NO coinciden
+                    // Entonces devolvemos !matches (false si coincide, true si no coincide)
+                    const result = !matches;
+                    if (row[column] === value || (Array.isArray(value) && value.includes(row[column]?.toString()))) {
+                        console.log(`  ❌ Row with value "${row[column]}" matches filter value "${value}", but condition is "${condition}", so excluding (result: ${result})`);
+                    }
+                    return result;
+                }
+                // Para condiciones normales (contains, equals), devolver matches tal cual
+                return matches;
             });
         }
     });
@@ -2764,6 +2508,17 @@ export function resetFilterManager() {
   renderActiveFiltersSummaryChips();
 }
 
+// Helper function to get condition label text
+function getConditionLabel(condition) {
+  const conditionLabels = {
+    'contains': '',
+    'equals': '=',
+    'not_contains': 'NOT',
+    'not_equals': 'NOT ='
+  };
+  return conditionLabels[condition] || '';
+}
+
 // --- Render active filter chips above the table ---
 export function renderActiveFiltersSummaryChips() {
   const summary = document.getElementById('activeFiltersSummary');
@@ -2780,23 +2535,17 @@ export function renderActiveFiltersSummaryChips() {
   // Group filters for display
   const dateFilters = {};
   const otherFilters = {};
-  const notFilters = new Set(); // Track NOT filters
-  
   Object.entries(filterValues).forEach(([key, value]) => {
-    if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty') || key.endsWith('_no_empty')) {
-      const baseKey = key.replace(/_(start|end|empty|no_empty)$/, '');
+    if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
+      const baseKey = key.replace(/_(start|end|empty)$/, '');
       if (!dateFilters[baseKey]) {
-        dateFilters[baseKey] = { start: '', end: '', empty: false, noEmpty: false };
+        dateFilters[baseKey] = { start: '', end: '', empty: false };
       }
       if (key.endsWith('_start')) dateFilters[baseKey].start = value;
       if (key.endsWith('_end')) dateFilters[baseKey].end = value;
       if (key.endsWith('_empty')) dateFilters[baseKey].empty = value;
-      if (key.endsWith('_no_empty')) dateFilters[baseKey].noEmpty = value;
-    } else if (key.endsWith('_not')) {
-      // Track NOT filters
-      const baseKey = key.replace('_not', '');
-      notFilters.add(baseKey);
-    } else {
+    } else if (!key.endsWith('_condition')) {
+      // Excluir condiciones del objeto otherFilters
       otherFilters[key] = value;
     }
   });
@@ -2804,26 +2553,17 @@ export function renderActiveFiltersSummaryChips() {
   let count = 0;
   // Date filters
   Object.entries(dateFilters).forEach(([column, filter]) => {
-    if (filter.start || filter.end || filter.empty || filter.noEmpty) {
+    if (filter.start || filter.end || filter.empty) {
       count++;
       const tag = document.createElement('div');
       tag.className = 'filter-tag';
-      const isNotFilter = notFilters.has(column);
       let text = `${column}: `;
-      
-      if (isNotFilter) {
-        text = `NOT ${column}: `;
-      }
-      
       if (filter.empty && !filter.start && !filter.end) {
         text += '(empty)';
-      } else if (filter.noEmpty && !filter.start && !filter.end) {
-        text += '(not empty)';
       } else {
         if (filter.start) text += `from ${prettyDynamicDate(filter.start)}`;
         if (filter.end) text += ` to ${prettyDynamicDate(filter.end)}`;
         if (filter.empty) text += ' (including empty)';
-        if (filter.noEmpty) text += ' (excluding empty)';
       }
       tag.innerHTML = `
         <span>${text}</span>
@@ -2838,10 +2578,12 @@ export function renderActiveFiltersSummaryChips() {
       count++;
       const tag = document.createElement('div');
       tag.className = 'filter-tag';
-      const isNotFilter = notFilters.has(column);
-      const prefix = isNotFilter ? 'NOT ' : '';
+      // Obtener la condición para esta columna
+      const condition = filterValues[`${column}_condition`] || 'contains';
+      const conditionLabel = getConditionLabel(condition);
+      const conditionText = conditionLabel ? `${conditionLabel} ` : '';
       tag.innerHTML = `
-        <span>${prefix}${column}: ${values.join(', ')}</span>
+        <span>${conditionText}${column}: ${values.join(', ')}</span>
         <button class="filter-tag-remove" data-column="${column}">×</button>
       `;
       summary.appendChild(tag);
@@ -2858,9 +2600,8 @@ export function renderActiveFiltersSummaryChips() {
         delete updated[`${column}_start`];
         delete updated[`${column}_end`];
         delete updated[`${column}_empty`];
-        delete updated[`${column}_no_empty`];
-        delete updated[`${column}_not`];
       delete updated[column];
+      delete updated[`${column}_condition`];
         setModuleFilterValues(updated);
       // Quitar resaltado si ya no hay nada filtrado
         const filterItem = document.querySelector(`.filter-item[data-column="${column}"]`);
@@ -2870,31 +2611,13 @@ export function renderActiveFiltersSummaryChips() {
           input.removeAttribute('data-dynamic');
         });
           filterItem.querySelectorAll('.filter-checkbox').forEach(checkbox => checkbox.checked = false);
-          
-          // Limpiar filtros NOT específicos
-          const notCheckbox = filterItem.querySelector(`#not-filter-${column}`);
-          if (notCheckbox) {
-            notCheckbox.checked = false;
-            const notLabel = filterItem.querySelector(`label[for="not-filter-${column}"]`);
-            if (notLabel) {
-              notLabel.style.color = '#E8F4F8';
-              notLabel.textContent = 'NOT (Exclude selected values)';
-            }
-          }
-          
-          // Limpiar botones Empty/No Empty
-          const emptyBtn = filterItem.querySelector('.empty-toggle-btn');
-          if (emptyBtn) emptyBtn.classList.remove('active');
-          const noEmptyBtn = filterItem.querySelector('.no-empty-toggle-btn');
-          if (noEmptyBtn) noEmptyBtn.classList.remove('active');
-          
-        if (!getModuleFilterValues()[`${column}_start`] && !getModuleFilterValues()[`${column}_end`] && !getModuleFilterValues()[`${column}_empty`] && !getModuleFilterValues()[`${column}_no_empty`] && !getModuleFilterValues()[`${column}_not`]) {
+        if (!getModuleFilterValues()[`${column}_start`] && !getModuleFilterValues()[`${column}_end`] && !getModuleFilterValues()[`${column}_empty`]) {
           filterItem.classList.remove('active');
         }
       }
       // Quitar el tipo de filtro si ya no hay nada filtrado
       const activeFilters = { ...getModuleActiveFilters() };
-      if (!updated[`${column}_start`] && !updated[`${column}_end`] && !updated[`${column}_empty`] && !updated[`${column}_no_empty`] && !updated[`${column}_not`]) {
+      if (!updated[`${column}_start`] && !updated[`${column}_end`] && !updated[`${column}_empty`]) {
         delete activeFilters[column];
         setModuleActiveFilters(activeFilters);
       }
@@ -2986,13 +2709,6 @@ function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType =
   const headers = Object.keys(getOriginalData()[0] || {});
   const filterValues = { ...getModuleFilterValues() };
   const activeFilters = { ...getModuleActiveFilters() };
-  
-  // Debug: Verify NOT states are included in filterValues
-  const notStates = Object.keys(filterValues).filter(key => key.endsWith('_not'));
-  if (notStates.length > 0) {
-    console.log(`[saveQuickFilter] Saving quick filter "${name}" with NOT states:`, notStates);
-  }
-  
   const quickFilters = loadQuickFilters();
   const filterObj = { filterValues, activeFilters, headers, hubType };
   if (urgencyCard && urgencyCard !== 'Ninguna') filterObj.linkedUrgencyCard = urgencyCard;
@@ -3078,65 +2794,59 @@ function getFilteredData() {
     }
     const value = filterValues[column];
     if (!value || (Array.isArray(value) && value.length === 0)) return;
+    const condition = filterValues[`${column}_condition`] || 'contains';
     filteredData = filteredData.filter(row => {
       const cellValue = row[column];
-      
-      // Safety check: if cellValue is undefined or null, handle it
-      if (cellValue === undefined || cellValue === null) {
-        // Only include if __EMPTY__ is selected, otherwise exclude
-        if (Array.isArray(value) && value.includes('__EMPTY__')) {
+      if (cellValue === null || cellValue === undefined) {
+        // Para condiciones NOT, los valores null/undefined pueden pasar
+        if (condition === 'not_contains' || condition === 'not_equals') {
           return true;
         }
         return false;
       }
-      
       if (Array.isArray(value)) {
-        const isEmpty = cellValue === '' || cellValue === null || cellValue === undefined;
-        
-        // Handle __NO_EMPTY__ filter - MUST be checked first
-        if (value.includes('__NO_EMPTY__')) {
-          // If cell is empty, always exclude it when __NO_EMPTY__ is selected
-          if (isEmpty) {
+        if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
+          // Para condiciones NOT, si está vacío y buscamos empty, no debe pasar
+          if (condition === 'not_contains' || condition === 'not_equals') {
             return false;
-          } else {
-            // Cell is not empty
-            // Get actual values (excluding special markers)
-            const actualValues = value.filter(v => v !== '__NO_EMPTY__' && v !== '__EMPTY__');
-            if (actualValues.length === 0) {
-              // If ONLY __NO_EMPTY__ is selected (no other values), include ALL non-empty values
-              return true;
-            } else {
-              // __NO_EMPTY__ + other values: cell must match one of the selected values
-              return actualValues.includes(cellValue?.toString());
-            }
           }
-        }
-        // Handle __EMPTY__ filter
-        else if (value.includes('__EMPTY__') && isEmpty) {
           return true;
         }
-        // Normal case: check if value is in the array
-        else {
-          return value.includes(cellValue?.toString());
+        const isIncluded = value.includes(cellValue?.toString());
+        // Aplicar condición NOT
+        if (condition === 'not_contains' || condition === 'not_equals') {
+          return !isIncluded;
         }
+        return isIncluded;
       }
+      let matches = false;
       switch (filterType) {
         case 'text':
-          // Safety check before calling toString
-          if (cellValue === undefined || cellValue === null) return false;
-          return normalizeText(cellValue.toString()).includes(normalizeText(value));
+          const normalizedCell = normalizeText(cellValue.toString());
+          const normalizedValue = normalizeText(value);
+          if (condition === 'equals' || condition === 'not_equals') {
+            matches = normalizedCell === normalizedValue;
+          } else {
+            matches = normalizedCell.includes(normalizedValue);
+          }
+          break;
         case 'number':
-          if (cellValue === undefined || cellValue === null) return false;
           const numValue = parseFloat(value);
           const cellNum = parseFloat(cellValue);
-          return !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+          matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+          break;
         case 'categorical':
-          if (cellValue === undefined || cellValue === null) return false;
           const selectedValues = value.split(',').map(v => v.trim());
-          return selectedValues.includes(cellValue.toString());
+          matches = selectedValues.includes(cellValue.toString());
+          break;
         default:
-          return true;
+          matches = true;
       }
+      // Aplicar condición NOT
+      if (condition === 'not_contains' || condition === 'not_equals') {
+        return !matches;
+      }
+      return matches;
     });
   });
   const sortConfig = getSortConfig();
