@@ -546,15 +546,28 @@ function generateFilterSidebar(headers) {
       });
       // Chips de otros filtros
       Object.entries(filterValues).forEach(([key, value]) => {
-        if (!key.endsWith('_start') && !key.endsWith('_end') && !key.endsWith('_empty') && !key.endsWith('_condition') && Array.isArray(value) && value.length > 0) {
-          const tag = document.createElement('div');
-          tag.className = 'modal-filter-tag';
-          // Obtener la condición para esta columna
-          const condition = filterValues[`${key}_condition`] || 'contains';
-          const conditionLabel = getConditionLabel(condition);
-          const conditionText = conditionLabel ? `${conditionLabel} ` : '';
-          tag.innerHTML = `<span>${conditionText}${key}: ${value.join(', ')}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
-          list.appendChild(tag);
+        if (!key.endsWith('_start') && !key.endsWith('_end') && !key.endsWith('_empty') && !key.endsWith('_condition')) {
+          // Mostrar tanto arrays como strings (valores únicos del input de texto)
+          if (Array.isArray(value) && value.length > 0) {
+            const tag = document.createElement('div');
+            tag.className = 'modal-filter-tag';
+            // Obtener la condición para esta columna
+            const condition = filterValues[`${key}_condition`] || 'contains';
+            const conditionLabel = getConditionLabel(condition);
+            const conditionText = conditionLabel ? `${conditionLabel} ` : '';
+            tag.innerHTML = `<span>${conditionText}${key}: ${value.join(', ')}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
+            list.appendChild(tag);
+          } else if (typeof value === 'string' && value.trim() !== '') {
+            // Mostrar valores de tipo string (del input de texto)
+            const tag = document.createElement('div');
+            tag.className = 'modal-filter-tag';
+            // Obtener la condición para esta columna
+            const condition = filterValues[`${key}_condition`] || 'contains';
+            const conditionLabel = getConditionLabel(condition);
+            const conditionText = conditionLabel ? `${conditionLabel} ` : '';
+            tag.innerHTML = `<span>${conditionText}${key}: ${value}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
+            list.appendChild(tag);
+          }
         }
       });
       // Listeners para eliminar chips
@@ -1946,6 +1959,7 @@ function generateFilterSidebar(headers) {
       });
       // Add other filters
       Object.entries(otherFilters).forEach(([column, values]) => {
+        // Mostrar tanto arrays como strings (valores únicos del input de texto)
         if (Array.isArray(values) && values.length > 0) {
           const tag = document.createElement('div');
           tag.className = 'modal-filter-tag';
@@ -1955,6 +1969,19 @@ function generateFilterSidebar(headers) {
           const conditionText = conditionLabel ? `${conditionLabel} ` : '';
           tag.innerHTML = `
             <span>${conditionText}${column}: ${values.join(', ')}</span>
+            <button class="modal-filter-tag-remove" data-column="${column}">×</button>
+          `;
+          list.appendChild(tag);
+        } else if (typeof values === 'string' && values.trim() !== '') {
+          // Mostrar valores de tipo string (del input de texto)
+          const tag = document.createElement('div');
+          tag.className = 'modal-filter-tag';
+          // Obtener la condición para esta columna
+          const condition = filterValues[`${column}_condition`] || 'contains';
+          const conditionLabel = getConditionLabel(condition);
+          const conditionText = conditionLabel ? `${conditionLabel} ` : '';
+          tag.innerHTML = `
+            <span>${conditionText}${column}: ${values}</span>
             <button class="modal-filter-tag-remove" data-column="${column}">×</button>
           `;
           list.appendChild(tag);
@@ -2726,6 +2753,7 @@ export function renderActiveFiltersSummaryChips() {
   });
   // Other filters
   Object.entries(otherFilters).forEach(([column, values]) => {
+    // Mostrar tanto arrays como strings (valores únicos del input de texto)
     if (Array.isArray(values) && values.length > 0) {
       count++;
       const tag = document.createElement('div');
@@ -2736,6 +2764,20 @@ export function renderActiveFiltersSummaryChips() {
       const conditionText = conditionLabel ? `${conditionLabel} ` : '';
       tag.innerHTML = `
         <span>${conditionText}${column}: ${values.join(', ')}</span>
+        <button class="filter-tag-remove" data-column="${column}">×</button>
+      `;
+      summary.appendChild(tag);
+    } else if (typeof values === 'string' && values.trim() !== '') {
+      // Mostrar valores de tipo string (del input de texto)
+      count++;
+      const tag = document.createElement('div');
+      tag.className = 'filter-tag';
+      // Obtener la condición para esta columna
+      const condition = filterValues[`${column}_condition`] || 'contains';
+      const conditionLabel = getConditionLabel(condition);
+      const conditionText = conditionLabel ? `${conditionLabel} ` : '';
+      tag.innerHTML = `
+        <span>${conditionText}${column}: ${values}</span>
         <button class="filter-tag-remove" data-column="${column}">×</button>
       `;
       summary.appendChild(tag);
