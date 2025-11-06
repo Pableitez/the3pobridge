@@ -1848,9 +1848,17 @@ function generateFilterSidebar(headers) {
               input.value = `${selected.length} selected`;
             }
           }
-          if (Array.isArray(getModuleFilterValues()[selectedColumn])) {
-            selectedSet = new Set(getModuleFilterValues()[selectedColumn]);
+          // Cargar valores guardados (solo si son arrays, no strings del textInput)
+          const savedValue = getModuleFilterValues()[selectedColumn];
+          if (Array.isArray(savedValue)) {
+            selectedSet = new Set(savedValue);
             updateInputSummary();
+          } else if (typeof savedValue === 'string' && savedValue.trim() !== '') {
+            // Si hay un valor string guardado, asegurarse de que el textInput lo tenga
+            if (textInput && textInput.value !== savedValue) {
+              textInput.value = savedValue;
+              filterDiv.classList.add('active');
+            }
           }
           filterDiv.appendChild(dropdownWrapper);
         }
