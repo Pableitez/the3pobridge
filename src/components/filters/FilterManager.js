@@ -1435,9 +1435,15 @@ function generateFilterSidebar(headers) {
               if (values.length > 1) {
                 // Múltiples valores: guardar como array
                 currentValues[selectedColumn] = values;
-              } else {
+                console.log('💾 Saving multiple values as array:', values);
+              } else if (values.length === 1) {
                 // Un solo valor: guardar como string (no como array)
                 currentValues[selectedColumn] = values[0];
+                console.log('💾 Saving single value as string:', values[0], 'type:', typeof values[0]);
+              } else {
+                // No hay valores válidos, no debería llegar aquí
+                console.warn('⚠️ No valid values to save!');
+                return;
               }
               currentValues[`${selectedColumn}_condition`] = condition;
               
