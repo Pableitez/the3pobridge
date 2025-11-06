@@ -2615,9 +2615,11 @@ function setupFilterEvents() {
         const filterItems = document.querySelectorAll('.filter-item');
         filterItems.forEach(filterDiv => {
           if (filterDiv.textInput && filterDiv.handleTextInput) {
-            // Procesar el input de texto si tiene valor
+            // Procesar el input de texto si tiene valor (incluso un solo valor)
             const textValue = filterDiv.textInput.value.trim();
+            console.log('🔍 Apply button: Processing text input for column:', filterDiv.dataset.column, 'value:', textValue);
             if (textValue) {
+              // Llamar directamente a handleTextInput sin debounce
               filterDiv.handleTextInput();
             }
           }
