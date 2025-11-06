@@ -2279,9 +2279,13 @@ function applyFilters() {
                         matches = true;
                 }
                 // Aplicar condición NOT
+                // Si la condición es NOT, invertir el resultado
                 if (condition === 'not_contains' || condition === 'not_equals') {
+                    // matches = true significa que coincide, pero queremos los que NO coinciden
+                    // Entonces devolvemos !matches (false si coincide, true si no coincide)
                     return !matches;
                 }
+                // Para condiciones normales (contains, equals), devolver matches tal cual
                 return matches;
             });
         }
