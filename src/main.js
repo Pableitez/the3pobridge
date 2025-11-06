@@ -2613,18 +2613,23 @@ function setupFilterEvents() {
       if (filterManager) {
         // Procesar todos los inputs de texto antes de aplicar filtros
         const filterItems = document.querySelectorAll('.filter-item');
+        let hasTextInputs = false;
         filterItems.forEach(filterDiv => {
           if (filterDiv.textInput && filterDiv.handleTextInput) {
             // Procesar el input de texto si tiene valor (incluso un solo valor)
             const textValue = filterDiv.textInput.value.trim();
             console.log('🔍 Apply button: Processing text input for column:', filterDiv.dataset.column, 'value:', textValue);
             if (textValue) {
+              hasTextInputs = true;
               // Llamar directamente a handleTextInput sin debounce
+              // Esto guardará el valor en moduleFilterValues
               filterDiv.handleTextInput();
+              console.log('✅ Applied text input for column:', filterDiv.dataset.column);
             }
           }
         });
         
+        // Aplicar filtros inmediatamente (handleTextInput ya guarda los valores)
         filterManager.applyFilters();
         updateActiveFiltersSummary();
         renderActiveFiltersSummaryChips();
