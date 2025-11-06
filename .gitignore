@@ -134,4 +134,31 @@ build/
  
  
  
- 
+ AppData/
+Desktop/
+Documents/
+Downloads/
+OneDrive/
+Pictures/
+Videos/
+Music/
+Contacts/
+Favorites/
+Links/
+Searches/
+Saved Games/
+Calibre Library/
+IntelGraphicsProfiles/
+.bash_history
+.cursor/
+.lesshst
+.node_repl_history
+.railway/
+.viminfo
+NTUSER.*
+ntuser.*
+*.regtrans-ms
+*.TM.blf
+*.TMContainer*
+*.LOG*
+*.ini
