@@ -2456,23 +2456,24 @@ function applyFilters() {
                 // Si el valor de la celda es null/undefined/empty, tratarlo como string vacío para comparación
                 const isEmpty = cellValue === null || cellValue === undefined || cellValue === '';
                 if (isEmpty) {
-                    // Si estamos filtrando con NOT y hay un valor específico, los empty NO deben pasar
-                    // Solo si el valor del filtro es específicamente '__EMPTY__' o está en un array con '__EMPTY__'
+                    // Para condiciones NOT: si el filtro es para un valor específico (no empty), los empty NO deben pasar
+                    // porque el usuario quiere ver los que NO son empty (tienen valor)
                     if (condition === 'not_contains' || condition === 'not_equals') {
                         // Si el valor del filtro es un array y contiene '__EMPTY__', entonces los empty NO deben pasar
                         if (Array.isArray(value) && value.includes('__EMPTY__')) {
                             return false; // Los empty NO deben pasar si estamos excluyendo '__EMPTY__'
                         }
-                        // Si el valor del filtro es un string específico (no empty), los empty SÍ deben pasar (son diferentes)
+                        // Si el valor del filtro es un string específico (no empty), los empty NO deben pasar
+                        // porque el usuario quiere ver los que tienen ese valor específico, no los empty
                         if (typeof value === 'string' && value !== '' && value !== '__EMPTY__') {
-                            return true; // Los empty son diferentes del valor filtrado, así que pasan
+                            return false; // Los empty NO deben pasar - el usuario quiere ver los que NO son empty
                         }
                         // Si el valor del filtro es '__EMPTY__' o está vacío, los empty NO deben pasar
                         if (value === '__EMPTY__' || value === '') {
                             return false;
                         }
-                        // Por defecto, si hay un valor específico, los empty pasan (son diferentes)
-                        return true;
+                        // Por defecto, los empty NO deben pasar con NOT
+                        return false;
                     }
                     // Para condiciones normales (contains, equals), los empty no pasan
                     return false;
