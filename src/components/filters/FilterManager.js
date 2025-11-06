@@ -2078,7 +2078,13 @@ function generateFilterSidebar(headers) {
         // Asegurar que todas las condiciones se copien correctamente
         const filterValuesToApply = { ...filterObj.filterValues };
         // IMPORTANTE: Las condiciones _condition deben estar presentes antes de aplicar filtros
-        console.log('🔍 Applying saved filter:', name, 'with conditions:', Object.keys(filterValuesToApply).filter(k => k.endsWith('_condition')));
+        const conditionKeys = Object.keys(filterValuesToApply).filter(k => k.endsWith('_condition'));
+        console.log('🔍 Applying saved filter:', name);
+        console.log('🔍 Condition keys found:', conditionKeys);
+        conditionKeys.forEach(ck => {
+          const col = ck.replace('_condition', '');
+          console.log(`🔍   - ${col}: condition = "${filterValuesToApply[ck]}", value =`, filterValuesToApply[col]);
+        });
         setModuleFilterValues(filterValuesToApply);
         // Reconstruct activeFilters from filterValues (excluyendo _condition)
         const newActiveFilters = {};
@@ -2585,7 +2591,12 @@ function applyFilters() {
                 }
                 // Aplicar condición NOT
                 if (condition === 'not_contains' || condition === 'not_equals') {
-                    return !matches;
+                    const shouldPass = !matches; // Si NO coincide, la fila debe pasar
+                    // Debug para valores individuales
+                    if (typeof value === 'string' && !Array.isArray(value)) {
+                        console.log(`🔍   Single value NOT check: cellValue="${cellValue}", value="${actualValue}", matches=${matches}, shouldPass=${shouldPass}`);
+                    }
+                    return shouldPass;
                 }
                 // Para condiciones normales (contains, equals), devolver matches tal cual
                 return matches;
