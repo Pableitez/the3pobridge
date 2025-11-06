@@ -1910,7 +1910,8 @@ function generateFilterSidebar(headers) {
           if (key.endsWith('_start')) dateFilters[baseKey].start = value;
           if (key.endsWith('_end')) dateFilters[baseKey].end = value;
           if (key.endsWith('_empty')) dateFilters[baseKey].empty = value;
-        } else {
+        } else if (!key.endsWith('_condition')) {
+          // Excluir condiciones del objeto otherFilters
           otherFilters[key] = value;
         }
       });
