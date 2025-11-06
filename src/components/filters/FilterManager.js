@@ -1936,11 +1936,29 @@ function generateFilterSidebar(headers) {
       });
       // Add other filters
       Object.entries(otherFilters).forEach(([column, values]) => {
+        // Mostrar tanto arrays como strings (valores únicos del input de texto)
         if (Array.isArray(values) && values.length > 0) {
           const tag = document.createElement('div');
           tag.className = 'modal-filter-tag';
+          // Obtener la condición para esta columna
+          const condition = filterValues[`${column}_condition`] || 'contains';
+          const conditionLabel = getConditionLabel(condition);
+          const conditionText = conditionLabel ? `${conditionLabel} ` : '';
           tag.innerHTML = `
-            <span>${column}: ${values.join(', ')}</span>
+            <span>${conditionText}${column}: ${values.join(', ')}</span>
+            <button class="modal-filter-tag-remove" data-column="${column}">×</button>
+          `;
+          list.appendChild(tag);
+        } else if (typeof values === 'string' && values.trim() !== '') {
+          // Mostrar valores de tipo string (del input de texto)
+          const tag = document.createElement('div');
+          tag.className = 'modal-filter-tag';
+          // Obtener la condición para esta columna
+          const condition = filterValues[`${column}_condition`] || 'contains';
+          const conditionLabel = getConditionLabel(condition);
+          const conditionText = conditionLabel ? `${conditionLabel} ` : '';
+          tag.innerHTML = `
+            <span>${conditionText}${column}: ${values}</span>
             <button class="modal-filter-tag-remove" data-column="${column}">×</button>
           `;
           list.appendChild(tag);
@@ -1952,11 +1970,12 @@ function generateFilterSidebar(headers) {
           const column = btn.dataset.column;
             const updated = { ...getModuleFilterValues() };
           // Eliminar todos los valores posibles del filtro
-            delete updated[`${column}_start`];
-            delete updated[`${column}_end`];
-            delete updated[`${column}_empty`];
+          delete updated[`${column}_start`];
+          delete updated[`${column}_end`];
+          delete updated[`${column}_empty`];
           delete updated[column];
-            setModuleFilterValues(updated);
+          delete updated[`${column}_condition`];
+          setModuleFilterValues(updated);
           // Eliminar de activeFilters SIEMPRE
           const activeFilters = { ...getModuleActiveFilters() };
           delete activeFilters[column];
@@ -2750,11 +2769,12 @@ export function renderActiveFiltersSummaryChips() {
       const column = btn.dataset.column;
         const updated = { ...getModuleFilterValues() };
       // Eliminar todos los valores posibles del filtro
-        delete updated[`${column}_start`];
-        delete updated[`${column}_end`];
-        delete updated[`${column}_empty`];
-      delete updated[column];
-        setModuleFilterValues(updated);
+          delete updated[`${column}_start`];
+          delete updated[`${column}_end`];
+          delete updated[`${column}_empty`];
+          delete updated[column];
+          delete updated[`${column}_condition`];
+          setModuleFilterValues(updated);
       // Quitar resaltado si ya no hay nada filtrado
         const filterItem = document.querySelector(`.filter-item[data-column="${column}"]`);
         if (filterItem) {
