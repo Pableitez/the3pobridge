@@ -2231,6 +2231,7 @@ function applyFilters() {
             const value = moduleFilterValues[column];
             if (!value || (Array.isArray(value) && value.length === 0)) return;
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
+            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value);
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) {
@@ -2283,7 +2284,11 @@ function applyFilters() {
                 if (condition === 'not_contains' || condition === 'not_equals') {
                     // matches = true significa que coincide, pero queremos los que NO coinciden
                     // Entonces devolvemos !matches (false si coincide, true si no coincide)
-                    return !matches;
+                    const result = !matches;
+                    if (row[column] === value || (Array.isArray(value) && value.includes(row[column]?.toString()))) {
+                        console.log(`  ❌ Row with value "${row[column]}" matches filter value "${value}", but condition is "${condition}", so excluding (result: ${result})`);
+                    }
+                    return result;
                 }
                 // Para condiciones normales (contains, equals), devolver matches tal cual
                 return matches;
