@@ -1386,10 +1386,14 @@ function generateFilterSidebar(headers) {
             const textValue = textInput.value.trim();
             const condition = getModuleFilterValues()[`${selectedColumn}_condition`] || 'contains';
             
+            console.log('🔍 handleTextInput called with textValue:', textValue);
+            
             if (textValue) {
               // Si hay un valor escrito, usar ese valor como filtro
               // Soporte para múltiples valores separados por comas
               const values = textValue.split(',').map(v => v.trim()).filter(v => v !== '');
+              
+              console.log('🔍 Processed values array:', values, 'length:', values.length);
               
               if (values.length === 0) {
                 // Si no hay valores válidos después de filtrar, limpiar
@@ -1416,11 +1420,13 @@ function generateFilterSidebar(headers) {
               }
               
               const currentValues = { ...getModuleFilterValues() };
-              // Si hay múltiples valores, guardarlos como array, si no, como string
+              // SIEMPRE guardar como string para un solo valor, o como array para múltiples
+              // Esto asegura que la lógica de filtrado funcione correctamente
               if (values.length > 1) {
+                // Múltiples valores: guardar como array
                 currentValues[selectedColumn] = values;
               } else {
-                // Un solo valor: guardar como string
+                // Un solo valor: guardar como string (no como array)
                 currentValues[selectedColumn] = values[0];
               }
               currentValues[`${selectedColumn}_condition`] = condition;
@@ -1431,7 +1437,8 @@ function generateFilterSidebar(headers) {
               console.log(`✅ Text input filter applied for "${selectedColumn}":`, {
                 value: currentValues[selectedColumn],
                 condition: condition,
-                isArray: Array.isArray(currentValues[selectedColumn])
+                isArray: Array.isArray(currentValues[selectedColumn]),
+                type: typeof currentValues[selectedColumn]
               });
               
               // Aplicar filtros inmediatamente
@@ -2454,25 +2461,38 @@ function applyFilters() {
                 }
                 // Valor es un string (un solo valor del input de texto)
                 let matches = false;
+                // Asegurar que value sea string para procesarlo correctamente
+                const stringValue = typeof value === 'string' ? value : String(value);
+                
+                console.log(`🔍 Processing single string value for "${column}":`, {
+                  stringValue: stringValue,
+                  cellValue: cellValue,
+                  filterType: filterType,
+                  condition: condition
+                });
+                
                 switch (filterType) {
                     case 'text':
                         const normalizedCell = normalizeText(cellValue.toString());
-                        const normalizedValue = normalizeText(value.toString());
+                        const normalizedValue = normalizeText(stringValue);
                         if (condition === 'equals' || condition === 'not_equals') {
                             matches = normalizedCell === normalizedValue;
                         } else {
                             // contains o not_contains
                             matches = normalizedCell.includes(normalizedValue);
                         }
+                        console.log(`  → Text match result: ${matches} (cell: "${normalizedCell}", filter: "${normalizedValue}")`);
                         break;
                     case 'number':
-                        const numValue = parseFloat(value);
+                        const numValue = parseFloat(stringValue);
                         const cellNum = parseFloat(cellValue);
                         matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+                        console.log(`  → Number match result: ${matches}`);
                         break;
                     case 'categorical':
-                        const selectedValues = value.split(',').map(v => v.trim());
+                        const selectedValues = stringValue.split(',').map(v => v.trim());
                         matches = selectedValues.includes(cellValue.toString());
+                        console.log(`  → Categorical match result: ${matches}`);
                         break;
                     default:
                         matches = true;
