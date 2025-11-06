@@ -1497,7 +1497,22 @@ function generateFilterSidebar(headers) {
           // Debounced version para mientras escribe
           const handleTextInputDebounced = debounce(handleTextInput, 300);
           
-          textInput.addEventListener('input', handleTextInputDebounced);
+          // Aplicar inmediatamente cuando se escribe (sin debounce para valores únicos)
+          textInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            console.log('🔍 Text input event:', val);
+            // Si hay una coma, usar debounce. Si no, aplicar inmediatamente
+            if (val.includes(',')) {
+              handleTextInputDebounced();
+            } else if (val.length > 0) {
+              // Para un solo valor, aplicar inmediatamente sin debounce
+              console.log('🔍 Single value detected, applying immediately');
+              handleTextInput();
+            } else {
+              // Si está vacío, también aplicar para limpiar
+              handleTextInput();
+            }
+          });
           textInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
