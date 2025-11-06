@@ -1388,6 +1388,15 @@ function generateFilterSidebar(headers) {
             
             if (textValue) {
               // Si hay un valor escrito, usar ese valor como filtro
+              // Limpiar checkboxes seleccionados cuando se usa el input de texto
+              selectedSet.clear();
+              // Actualizar checkboxes visualmente
+              if (dropdown) {
+                dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                  cb.checked = false;
+                });
+              }
+              
               const currentValues = { ...getModuleFilterValues() };
               currentValues[selectedColumn] = textValue;
               currentValues[`${selectedColumn}_condition`] = condition;
@@ -1410,6 +1419,10 @@ function generateFilterSidebar(headers) {
             updateActiveFiltersSummary();
             applyFilters();
             renderActiveFiltersSummaryChips();
+            // Actualizar el resumen del input del dropdown
+            if (typeof updateInputSummary === 'function') {
+              updateInputSummary();
+            }
           }, 300);
           
           textInput.addEventListener('input', handleTextInput);
@@ -1665,6 +1678,10 @@ function generateFilterSidebar(headers) {
                   selectedSet.add(val);
                 } else {
                   selectedSet.delete(val);
+                }
+                // Limpiar el input de texto cuando se seleccionan checkboxes
+                if (textInput) {
+                  textInput.value = '';
                 }
                 // Preservar la condición al actualizar los valores
                 const currentValues = { ...getModuleFilterValues() };
