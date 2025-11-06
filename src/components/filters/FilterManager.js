@@ -3027,6 +3027,13 @@ function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType =
   const headers = Object.keys(getOriginalData()[0] || {});
   const filterValues = { ...getModuleFilterValues() };
   const activeFilters = { ...getModuleActiveFilters() };
+  // Asegurar que todas las condiciones se guarden
+  const conditionKeys = Object.keys(filterValues).filter(k => k.endsWith('_condition'));
+  console.log('💾 Saving quick filter:', name, 'with condition keys:', conditionKeys);
+  conditionKeys.forEach(ck => {
+    const col = ck.replace('_condition', '');
+    console.log(`💾   - ${col}: condition = "${filterValues[ck]}"`);
+  });
   const quickFilters = loadQuickFilters();
   const filterObj = { filterValues, activeFilters, headers, hubType };
   if (urgencyCard && urgencyCard !== 'Ninguna') filterObj.linkedUrgencyCard = urgencyCard;
