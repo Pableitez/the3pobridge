@@ -2077,6 +2077,8 @@ function generateFilterSidebar(headers) {
       if (filterObj.headerHash === headerHash) {
         // Asegurar que todas las condiciones se copien correctamente
         const filterValuesToApply = { ...filterObj.filterValues };
+        // IMPORTANTE: Las condiciones _condition deben estar presentes antes de aplicar filtros
+        console.log('🔍 Applying saved filter:', name, 'with conditions:', Object.keys(filterValuesToApply).filter(k => k.endsWith('_condition')));
         setModuleFilterValues(filterValuesToApply);
         // Reconstruct activeFilters from filterValues (excluyendo _condition)
         const newActiveFilters = {};
@@ -2096,7 +2098,11 @@ function generateFilterSidebar(headers) {
         }
         setModuleActiveFilters(newActiveFilters);
         generateFilterSidebar(headers);
-        // Restaurar condiciones en los selectores después de regenerar el sidebar
+        // Aplicar filtros INMEDIATAMENTE con las condiciones guardadas
+        // Esto es crítico para que las condiciones NOT funcionen
+        applyFilters();
+        renderActiveFiltersSummaryChips();
+        // Restaurar condiciones en los selectores después de regenerar el sidebar (para visualización)
         setTimeout(() => {
           Object.keys(filterObj.filterValues).forEach(key => {
             if (key.endsWith('_condition')) {
@@ -2112,7 +2118,7 @@ function generateFilterSidebar(headers) {
               }
             }
           });
-          // Aplicar filtros después de restaurar las condiciones
+          // Reaplicar filtros después de restaurar las condiciones visualmente (por si acaso)
           applyFilters();
         }, 100);
         // Forzar que la pestaña y panel de My Filters estén activos
@@ -2124,9 +2130,6 @@ function generateFilterSidebar(headers) {
           myFiltersTab.classList.add('active');
           myFiltersPanel.classList.add('active');
         }
-        // Aplicar filtros inmediatamente (también se aplicará en el setTimeout)
-        applyFilters();
-        renderActiveFiltersSummaryChips();
         
         // Show notification
         if (typeof window.showUnifiedNotification === 'function') {
