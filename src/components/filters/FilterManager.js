@@ -2018,7 +2018,15 @@ function generateFilterSidebar(headers) {
   const headers = Object.keys(getOriginalData()[0] || {});
   const headerHash = getHeaderHash(headers);
   const filters = loadMyFilters();
-  filters[name] = { filterValues: { ...getModuleFilterValues() }, headerHash, headers, linkedUrgencyCard: urgencyCard };
+  const filterValuesToSave = { ...getModuleFilterValues() };
+  // Asegurar que todas las condiciones se guarden
+  const conditionKeys = Object.keys(filterValuesToSave).filter(k => k.endsWith('_condition'));
+  console.log('💾 Saving filter:', name, 'with condition keys:', conditionKeys);
+  conditionKeys.forEach(ck => {
+    const col = ck.replace('_condition', '');
+    console.log(`💾   - ${col}: condition = "${filterValuesToSave[ck]}"`);
+  });
+  filters[name] = { filterValues: filterValuesToSave, headerHash, headers, linkedUrgencyCard: urgencyCard };
   localStorage.setItem('myFilters', JSON.stringify(filters));
   
   // Trigger auto-save
@@ -2116,6 +2124,11 @@ function generateFilterSidebar(headers) {
               const conditionSelect = document.querySelector(`.filter-item[data-column="${column}"] .filter-condition-select`);
               if (conditionSelect) {
                 conditionSelect.value = filterObj.filterValues[key];
+                console.log(`✅ Restored condition selector for "${column}": "${filterObj.filterValues[key]}"`);
+                // Disparar evento change para asegurar que se guarde la condición
+                conditionSelect.dispatchEvent(new Event('change'));
+              } else {
+                console.warn(`⚠️ Condition selector not found for column "${column}"`);
               }
               // También restaurar el input de texto si existe
               const textInput = document.querySelector(`.filter-item[data-column="${column}"] .filter-text-input`);
@@ -2124,9 +2137,13 @@ function generateFilterSidebar(headers) {
               }
             }
           });
+          // Verificar que las condiciones se aplicaron correctamente
+          const currentFilterValues = getModuleFilterValues();
+          const currentConditionKeys = Object.keys(currentFilterValues).filter(k => k.endsWith('_condition'));
+          console.log('✅ Current filter values condition keys after restore:', currentConditionKeys);
           // Reaplicar filtros después de restaurar las condiciones visualmente (por si acaso)
           applyFilters();
-        }, 100);
+        }, 200); // Aumentar el timeout para dar más tiempo a que se genere el sidebar
         // Forzar que la pestaña y panel de My Filters estén activos
         const myFiltersTab = document.querySelector('.filter-tab[data-target="myfilters"]');
         const myFiltersPanel = document.getElementById('myfiltersFilterPanel');
