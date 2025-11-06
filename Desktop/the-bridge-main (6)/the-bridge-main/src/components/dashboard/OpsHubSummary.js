@@ -1142,6 +1142,11 @@ export class OpsHubSummary {
       const newActive = {};
       const newValues = {};
       Object.entries(filterObj.filterValues).forEach(([key, value]) => {
+        // Copiar también las condiciones (_condition)
+        if (key.endsWith('_condition')) {
+          newValues[key] = value;
+          return;
+        }
         if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
           const base = key.replace(/_(start|end|empty)$/, '');
           newActive[base] = 'date';
