@@ -2529,17 +2529,38 @@ function applyFilters() {
                     return false;
                 }
                 if (Array.isArray(value)) {
-                    if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
-                        // Para condiciones NOT, si está vacío y buscamos empty, no debe pasar
+                    const isEmpty = cellValue === '' || cellValue === null || cellValue === undefined;
+                    const hasEmptyInFilter = value.includes('__EMPTY__');
+                    
+                    // Si el filtro incluye __EMPTY__ y la celda está vacía
+                    if (hasEmptyInFilter && isEmpty) {
+                        // Para condiciones NOT: si buscamos empty con NOT, los empty NO deben pasar
                         if (condition === 'not_contains' || condition === 'not_equals') {
-                            return false;
+                            console.log(`🔍   Array filter with NOT: cell is empty, filter has __EMPTY__, should NOT pass`);
+                            return false; // Los empty NO deben pasar con NOT
                         }
+                        // Para condiciones normales: los empty pasan
                         return true;
                     }
+                    
+                    // Si la celda está vacía pero el filtro NO incluye __EMPTY__
+                    if (isEmpty && !hasEmptyInFilter) {
+                        // Para condiciones NOT: si NO buscamos empty, los empty SÍ deben pasar (son diferentes)
+                        if (condition === 'not_contains' || condition === 'not_equals') {
+                            console.log(`🔍   Array filter with NOT: cell is empty, filter does NOT have __EMPTY__, should pass`);
+                            return true; // Los empty pasan porque no están en el filtro
+                        }
+                        // Para condiciones normales: los empty no pasan si no están en el filtro
+                        return false;
+                    }
+                    
+                    // Si la celda tiene valor, verificar si está en el array
                     const isIncluded = value.includes(cellValue?.toString());
                     // Aplicar condición NOT
                     if (condition === 'not_contains' || condition === 'not_equals') {
-                        return !isIncluded;
+                        const shouldPass = !isIncluded;
+                        console.log(`🔍   Array filter with NOT: cellValue="${cellValue}", isIncluded=${isIncluded}, shouldPass=${shouldPass}`);
+                        return shouldPass;
                     }
                     return isIncluded;
                 }
