@@ -284,27 +284,57 @@ class AnalyticsDashboard {
       Object.entries(combinedActiveFilters).forEach(([column, filterType]) => {
         const value = combinedFilterValues[column];
         if (!value || (Array.isArray(value) && value.length === 0)) return;
+        const condition = combinedFilterValues[`${column}_condition`] || 'contains';
         
         filteredData = filteredData.filter(row => {
           const cellValue = row[column];
-          if (cellValue === null || cellValue === undefined) return false;
+          if (cellValue === null || cellValue === undefined) {
+            // Para condiciones NOT, los valores null/undefined pueden pasar
+            if (condition === 'not_contains' || condition === 'not_equals') {
+              return true;
+            }
+            return false;
+          }
           
           if (Array.isArray(value)) {
             if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
+              // Para condiciones NOT, si está vacío y buscamos empty, no debe pasar
+              if (condition === 'not_contains' || condition === 'not_equals') {
+                return false;
+              }
               return true;
             }
-            return value.includes(cellValue?.toString());
+            const isIncluded = value.includes(cellValue?.toString());
+            // Aplicar condición NOT
+            if (condition === 'not_contains' || condition === 'not_equals') {
+              return !isIncluded;
+            }
+            return isIncluded;
           }
           
+          let matches = false;
           switch (filterType) {
             case 'text':
-              return cellValue.toString().toLowerCase().includes(value.toLowerCase());
+              const normalizedCell = cellValue.toString().toLowerCase();
+              const normalizedValue = value.toLowerCase();
+              if (condition === 'equals' || condition === 'not_equals') {
+                matches = normalizedCell === normalizedValue;
+              } else {
+                matches = normalizedCell.includes(normalizedValue);
+              }
+              break;
             case 'categorical':
               const selectedValues = value.split(',').map(v => v.trim());
-              return selectedValues.includes(cellValue.toString());
+              matches = selectedValues.includes(cellValue.toString());
+              break;
             default:
-              return true;
+              matches = true;
           }
+          // Aplicar condición NOT
+          if (condition === 'not_contains' || condition === 'not_equals') {
+            return !matches;
+          }
+          return matches;
         });
       });
       
