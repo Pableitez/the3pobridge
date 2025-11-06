@@ -2120,8 +2120,20 @@ function generateFilterSidebar(headers) {
       if (filterObj.headerHash === headerHash) {
         // Asegurar que todas las condiciones se copien correctamente
         const filterValuesToApply = { ...filterObj.filterValues };
+        
+        // IMPORTANTE: Verificar que las condiciones estén presentes
+        Object.keys(filterValuesToApply).forEach(key => {
+          if (!key.endsWith('_condition') && !key.endsWith('_start') && !key.endsWith('_end') && !key.endsWith('_empty')) {
+            const conditionKey = `${key}_condition`;
+            if (!filterValuesToApply[conditionKey]) {
+              filterValuesToApply[conditionKey] = 'contains';
+            }
+          }
+        });
+        
         // IMPORTANTE: Las condiciones _condition deben estar presentes antes de aplicar filtros
         setModuleFilterValues(filterValuesToApply);
+        
         // Reconstruct activeFilters from filterValues (excluyendo _condition)
         const newActiveFilters = {};
         for (const key of Object.keys(filterObj.filterValues)) {
@@ -2140,8 +2152,8 @@ function generateFilterSidebar(headers) {
         }
         setModuleActiveFilters(newActiveFilters);
         generateFilterSidebar(headers);
+        
         // Aplicar filtros INMEDIATAMENTE con las condiciones guardadas
-        // Esto es crítico para que las condiciones NOT funcionen
         applyFilters();
         renderActiveFiltersSummaryChips();
         // Restaurar condiciones en los selectores después de regenerar el sidebar (para visualización)
@@ -2493,46 +2505,59 @@ function applyFilters() {
             const value = moduleFilterValues[column];
             if (!value || (Array.isArray(value) && value.length === 0)) return;
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
+            
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 const cellValueStr = cellValue === null || cellValue === undefined ? '' : cellValue.toString();
                 const isEmpty = cellValue === null || cellValue === undefined || cellValue === '';
                 
-                // LÓGICA SIMPLE: Primero calcular si coincide, luego negar si es NOT
-                let matches = false;
+                // LÓGICA COMPLETAMENTE REHECHA: Calcular si la fila debe pasar el filtro
+                let shouldPass = false;
                 
                 if (Array.isArray(value)) {
-                    // Para arrays: verificar si el valor de la celda está en el array
-                    // Tratar __EMPTY__ como valor vacío
+                    // Para arrays (checkboxes seleccionados)
                     if (isEmpty) {
-                        // Si la celda está vacía, coincide si el array incluye __EMPTY__
-                        matches = value.includes('__EMPTY__');
+                        // Celda vacía: pasa si el array NO incluye __EMPTY__ (para NOT) o si incluye __EMPTY__ (para normal)
+                        const hasEmpty = value.includes('__EMPTY__');
+                        if (condition === 'not_contains' || condition === 'not_equals') {
+                            shouldPass = !hasEmpty; // NOT: pasa si NO está en el array
+                        } else {
+                            shouldPass = hasEmpty; // Normal: pasa si está en el array
+                        }
                     } else {
-                        // Si la celda tiene valor, verificar si está en el array
-                        matches = value.includes(cellValueStr);
+                        // Celda con valor: pasa si el valor NO está en el array (para NOT) o si está (para normal)
+                        const isInArray = value.includes(cellValueStr);
+                        if (condition === 'not_contains' || condition === 'not_equals') {
+                            shouldPass = !isInArray; // NOT: pasa si NO está en el array
+                        } else {
+                            shouldPass = isInArray; // Normal: pasa si está en el array
+                        }
                     }
                 } else if (typeof value === 'string') {
-                    // Para strings: aplicar la lógica de contains/equals
+                    // Para strings (input de texto)
                     const normalizedCell = normalizeText(cellValueStr);
                     const normalizedValue = normalizeText(value);
                     
-                    if (condition === 'equals' || condition === 'not_equals') {
-                        matches = normalizedCell === normalizedValue;
-                    } else {
-                        matches = normalizedCell.includes(normalizedValue);
+                    if (condition === 'equals') {
+                        shouldPass = normalizedCell === normalizedValue;
+                    } else if (condition === 'not_equals') {
+                        shouldPass = normalizedCell !== normalizedValue;
+                    } else if (condition === 'contains') {
+                        shouldPass = normalizedCell.includes(normalizedValue);
+                    } else if (condition === 'not_contains') {
+                        shouldPass = !normalizedCell.includes(normalizedValue);
                     }
                 } else {
                     // Para otros tipos, comparación directa
-                    matches = cellValueStr === value.toString();
+                    const matches = cellValueStr === value.toString();
+                    if (condition === 'not_equals' || condition === 'not_contains') {
+                        shouldPass = !matches;
+                    } else {
+                        shouldPass = matches;
+                    }
                 }
                 
-                // APLICAR NEGACIÓN SIMPLE: si es NOT, negar el resultado
-                if (condition === 'not_contains' || condition === 'not_equals') {
-                    return !matches;
-                }
-                
-                // Para condiciones normales, devolver matches tal cual
-                return matches;
+                return shouldPass;
             });
         }
     });
