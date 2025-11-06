@@ -1337,7 +1337,12 @@ function generateFilterSidebar(headers) {
           // Guardar condición cuando cambie
           conditionSelect.addEventListener('change', () => {
             const key = `${selectedColumn}_condition`;
-            setModuleFilterValues({ ...getModuleFilterValues(), [key]: conditionSelect.value });
+            const newCondition = conditionSelect.value;
+            console.log(`🔧 Condition changed for column "${selectedColumn}": "${newCondition}"`);
+            const currentValues = { ...getModuleFilterValues() };
+            currentValues[key] = newCondition;
+            setModuleFilterValues(currentValues);
+            console.log(`🔧 Saved condition for "${selectedColumn}":`, currentValues[key]);
             // Reaplicar filtros con la nueva condición
             applyFilters();
             updateActiveFiltersSummary();
