@@ -1354,11 +1354,9 @@ function generateFilterSidebar(headers) {
           conditionSelect.addEventListener('change', () => {
             const key = `${selectedColumn}_condition`;
             const newCondition = conditionSelect.value;
-            console.log(`🔄 Condition changed for "${selectedColumn}": "${newCondition}"`);
             const currentValues = { ...getModuleFilterValues() };
             currentValues[key] = newCondition;
             setModuleFilterValues(currentValues);
-            console.log(`✅ Condition saved: ${key} = "${newCondition}"`);
             // Reaplicar filtros con la nueva condición
             applyFilters();
             updateActiveFiltersSummary();
@@ -1639,7 +1637,6 @@ function generateFilterSidebar(headers) {
                 currentValues[conditionKey] = 'contains';
               }
               // La condición ya está en currentValues si existía, así que se preserva automáticamente
-              console.log(`💾 Select All clicked for "${selectedColumn}", preserving condition: "${currentValues[conditionKey]}"`);
               setModuleFilterValues(currentValues);
               filterDiv.classList.add('active');
               renderCheckboxList();
@@ -1691,7 +1688,6 @@ function generateFilterSidebar(headers) {
                 currentValues[conditionKey] = 'contains';
               }
               // La condición ya está en currentValues si existía, así que se preserva automáticamente
-              console.log(`💾 Empty button clicked for "${selectedColumn}", preserving condition: "${currentValues[conditionKey]}"`);
               setModuleFilterValues(currentValues);
               setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
               filterDiv.classList.toggle('active', selectedSet.size > 0);
@@ -1749,7 +1745,6 @@ function generateFilterSidebar(headers) {
                   currentValues[conditionKey] = 'contains';
                 }
                 // La condición ya está en currentValues si existía, así que se preserva automáticamente
-                console.log(`💾 Checkbox changed for "${selectedColumn}", preserving condition: "${currentValues[conditionKey]}"`);
                 setModuleFilterValues(currentValues);
                 setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
                 filterDiv.classList.toggle('active', selectedSet.size > 0);
@@ -2039,14 +2034,7 @@ function generateFilterSidebar(headers) {
     if (!filterValuesToSave[conditionKey]) {
       // Si no hay condición guardada, usar 'contains' como default
       filterValuesToSave[conditionKey] = 'contains';
-      console.log(`💾 Added default condition for "${column}": "contains"`);
     }
-  });
-  const conditionKeys = Object.keys(filterValuesToSave).filter(k => k.endsWith('_condition'));
-  console.log('💾 Saving filter:', name, 'with condition keys:', conditionKeys);
-  conditionKeys.forEach(ck => {
-    const col = ck.replace('_condition', '');
-    console.log(`💾   - ${col}: condition = "${filterValuesToSave[ck]}", value =`, filterValuesToSave[col]);
   });
   filters[name] = { filterValues: filterValuesToSave, headerHash, headers, linkedUrgencyCard: urgencyCard };
   localStorage.setItem('myFilters', JSON.stringify(filters));
@@ -2108,13 +2096,6 @@ function generateFilterSidebar(headers) {
         // Asegurar que todas las condiciones se copien correctamente
         const filterValuesToApply = { ...filterObj.filterValues };
         // IMPORTANTE: Las condiciones _condition deben estar presentes antes de aplicar filtros
-        const conditionKeys = Object.keys(filterValuesToApply).filter(k => k.endsWith('_condition'));
-        console.log('🔍 Applying saved filter:', name);
-        console.log('🔍 Condition keys found:', conditionKeys);
-        conditionKeys.forEach(ck => {
-          const col = ck.replace('_condition', '');
-          console.log(`🔍   - ${col}: condition = "${filterValuesToApply[ck]}", value =`, filterValuesToApply[col]);
-        });
         setModuleFilterValues(filterValuesToApply);
         // Reconstruct activeFilters from filterValues (excluyendo _condition)
         const newActiveFilters = {};
@@ -2133,15 +2114,6 @@ function generateFilterSidebar(headers) {
           }
         }
         setModuleActiveFilters(newActiveFilters);
-        // VERIFICAR que las condiciones se aplicaron correctamente ANTES de aplicar filtros
-        const filterValuesAfterSet = getModuleFilterValues();
-        const conditionKeysAfterSet = Object.keys(filterValuesAfterSet).filter(k => k.endsWith('_condition'));
-        console.log('🔍 Filter values after setModuleFilterValues:', filterValuesAfterSet);
-        console.log('🔍 Condition keys after set:', conditionKeysAfterSet);
-        conditionKeysAfterSet.forEach(ck => {
-          const col = ck.replace('_condition', '');
-          console.log(`🔍   After set: ${col}_condition = "${filterValuesAfterSet[ck]}", ${col} =`, filterValuesAfterSet[col]);
-        });
         generateFilterSidebar(headers);
         // Aplicar filtros INMEDIATAMENTE con las condiciones guardadas
         // Esto es crítico para que las condiciones NOT funcionen
@@ -2156,21 +2128,17 @@ function generateFilterSidebar(headers) {
               if (conditionSelect) {
                 const conditionValue = filterObj.filterValues[key];
                 conditionSelect.value = conditionValue;
-                console.log(`✅ Restored condition selector for "${column}": "${conditionValue}"`);
                 // Asegurar que la condición se guarde en el estado inmediatamente
                 const currentValues = { ...getModuleFilterValues() };
                 currentValues[`${column}_condition`] = conditionValue;
                 setModuleFilterValues(currentValues);
-                console.log(`✅ Condition saved immediately: ${column}_condition = "${conditionValue}"`);
                 // Disparar evento change para asegurar que se ejecuten los listeners
                 conditionSelect.dispatchEvent(new Event('change', { bubbles: true }));
               } else {
-                console.warn(`⚠️ Condition selector not found for column "${column}"`);
                 // Si no se encuentra el selector, guardar la condición directamente
                 const currentValues = { ...getModuleFilterValues() };
                 currentValues[`${column}_condition`] = filterObj.filterValues[key];
                 setModuleFilterValues(currentValues);
-                console.log(`✅ Condition saved directly (selector not found): ${column}_condition = "${filterObj.filterValues[key]}"`);
               }
               // También restaurar el input de texto si existe
               const textInput = document.querySelector(`.filter-item[data-column="${column}"] .filter-text-input`);
@@ -2179,10 +2147,6 @@ function generateFilterSidebar(headers) {
               }
             }
           });
-          // Verificar que las condiciones se aplicaron correctamente
-          const currentFilterValues = getModuleFilterValues();
-          const currentConditionKeys = Object.keys(currentFilterValues).filter(k => k.endsWith('_condition'));
-          console.log('✅ Current filter values condition keys after restore:', currentConditionKeys);
           // Reaplicar filtros después de restaurar las condiciones visualmente (por si acaso)
           applyFilters();
         }, 200); // Aumentar el timeout para dar más tiempo a que se genere el sidebar
@@ -2504,12 +2468,6 @@ function applyFilters() {
             const value = moduleFilterValues[column];
             if (!value || (Array.isArray(value) && value.length === 0)) return;
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
-            // Debug log para verificar condiciones NOT
-            if (condition === 'not_contains' || condition === 'not_equals') {
-                console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
-                console.log(`🔍 Total rows before NOT filter:`, filteredData.length);
-            }
-            const beforeCount = filteredData.length;
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 const cellValueStr = cellValue === null || cellValue === undefined ? '' : cellValue.toString();
@@ -2545,23 +2503,12 @@ function applyFilters() {
                 
                 // APLICAR NEGACIÓN SIMPLE: si es NOT, negar el resultado
                 if (condition === 'not_contains' || condition === 'not_equals') {
-                    const shouldPass = !matches;
-                    // Debug detallado para arrays con __EMPTY__
-                    if (Array.isArray(value) && value.includes('__EMPTY__')) {
-                        console.log(`🔍   Array with __EMPTY__: cellValue="${cellValueStr}", isEmpty=${isEmpty}, matches=${matches}, NOT => shouldPass=${shouldPass}`);
-                    } else {
-                        console.log(`🔍   cellValue="${cellValueStr}", matches=${matches}, NOT => shouldPass=${shouldPass}`);
-                    }
-                    return shouldPass;
+                    return !matches;
                 }
                 
                 // Para condiciones normales, devolver matches tal cual
                 return matches;
             });
-            // Debug log después del filtro NOT
-            if (condition === 'not_contains' || condition === 'not_equals') {
-                console.log(`🔍 Total rows after NOT filter:`, filteredData.length, 'removed:', beforeCount - filteredData.length);
-            }
         }
     });
 
@@ -2953,14 +2900,7 @@ function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType =
     if (!filterValues[conditionKey]) {
       // Si no hay condición guardada, usar 'contains' como default
       filterValues[conditionKey] = 'contains';
-      console.log(`💾 Added default condition for "${column}": "contains"`);
     }
-  });
-  const conditionKeys = Object.keys(filterValues).filter(k => k.endsWith('_condition'));
-  console.log('💾 Saving quick filter:', name, 'with condition keys:', conditionKeys);
-  conditionKeys.forEach(ck => {
-    const col = ck.replace('_condition', '');
-    console.log(`💾   - ${col}: condition = "${filterValues[ck]}", value =`, filterValues[col]);
   });
   const quickFilters = loadQuickFilters();
   const filterObj = { filterValues, activeFilters, headers, hubType };
