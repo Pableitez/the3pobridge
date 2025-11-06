@@ -2503,67 +2503,47 @@ function applyFilters() {
             const beforeCount = filteredData.length;
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
-                // Si el valor de la celda es null/undefined/empty, tratarlo como string vacío para comparación
+                const cellValueStr = cellValue === null || cellValue === undefined ? '' : cellValue.toString();
                 const isEmpty = cellValue === null || cellValue === undefined || cellValue === '';
-                if (isEmpty) {
-                    // Para condiciones NOT: si el filtro es para un valor específico (no empty), los empty NO deben pasar
-                    // porque el usuario quiere ver los que NO son empty (tienen valor)
-                    if (condition === 'not_contains' || condition === 'not_equals') {
-                        // Si el valor del filtro es un array y contiene '__EMPTY__', entonces los empty NO deben pasar
-                        if (Array.isArray(value) && value.includes('__EMPTY__')) {
-                            return false; // Los empty NO deben pasar si estamos excluyendo '__EMPTY__'
-                        }
-                        // Si el valor del filtro es un string específico (no empty), los empty NO deben pasar
-                        // porque el usuario quiere ver los que tienen ese valor específico, no los empty
-                        if (typeof value === 'string' && value !== '' && value !== '__EMPTY__') {
-                            return false; // Los empty NO deben pasar - el usuario quiere ver los que NO son empty
-                        }
-                        // Si el valor del filtro es '__EMPTY__' o está vacío, los empty NO deben pasar
-                        if (value === '__EMPTY__' || value === '') {
-                            return false;
-                        }
-                        // Por defecto, los empty NO deben pasar con NOT
-                        return false;
-                    }
-                    // Para condiciones normales (contains, equals), los empty no pasan
-                    return false;
-                }
+                
+                // LÓGICA SIMPLE: Primero calcular si coincide, luego negar si es NOT
+                let matches = false;
+                
                 if (Array.isArray(value)) {
-                    const isEmpty = cellValue === '' || cellValue === null || cellValue === undefined;
-                    const hasEmptyInFilter = value.includes('__EMPTY__');
-                    
-                    // Si el filtro incluye __EMPTY__ y la celda está vacía
-                    if (hasEmptyInFilter && isEmpty) {
-                        // Para condiciones NOT: si buscamos empty con NOT, los empty NO deben pasar
-                        if (condition === 'not_contains' || condition === 'not_equals') {
-                            console.log(`🔍   Array filter with NOT: cell is empty, filter has __EMPTY__, should NOT pass`);
-                            return false; // Los empty NO deben pasar con NOT
-                        }
-                        // Para condiciones normales: los empty pasan
-                        return true;
+                    // Para arrays: verificar si el valor de la celda está en el array
+                    // Tratar __EMPTY__ como valor vacío
+                    if (isEmpty) {
+                        matches = value.includes('__EMPTY__');
+                    } else {
+                        matches = value.includes(cellValueStr);
                     }
+                } else if (typeof value === 'string') {
+                    // Para strings: aplicar la lógica de contains/equals
+                    const normalizedCell = normalizeText(cellValueStr);
+                    const normalizedValue = normalizeText(value);
                     
-                    // Si la celda está vacía pero el filtro NO incluye __EMPTY__
-                    if (isEmpty && !hasEmptyInFilter) {
-                        // Para condiciones NOT: si NO buscamos empty, los empty SÍ deben pasar (son diferentes)
-                        if (condition === 'not_contains' || condition === 'not_equals') {
-                            console.log(`🔍   Array filter with NOT: cell is empty, filter does NOT have __EMPTY__, should pass`);
-                            return true; // Los empty pasan porque no están en el filtro
-                        }
-                        // Para condiciones normales: los empty no pasan si no están en el filtro
-                        return false;
+                    if (condition === 'equals' || condition === 'not_equals') {
+                        matches = normalizedCell === normalizedValue;
+                    } else {
+                        matches = normalizedCell.includes(normalizedValue);
                     }
-                    
-                    // Si la celda tiene valor, verificar si está en el array
-                    const isIncluded = value.includes(cellValue?.toString());
-                    // Aplicar condición NOT
-                    if (condition === 'not_contains' || condition === 'not_equals') {
-                        const shouldPass = !isIncluded;
-                        console.log(`🔍   Array filter with NOT: cellValue="${cellValue}", isIncluded=${isIncluded}, shouldPass=${shouldPass}`);
-                        return shouldPass;
-                    }
-                    return isIncluded;
+                } else {
+                    // Para otros tipos, comparación directa
+                    matches = cellValueStr === value.toString();
                 }
+                
+                // APLICAR NEGACIÓN SIMPLE: si es NOT, negar el resultado
+                if (condition === 'not_contains' || condition === 'not_equals') {
+                    const shouldPass = !matches;
+                    if (condition === 'not_contains' || condition === 'not_equals') {
+                        console.log(`🔍   cellValue="${cellValueStr}", matches=${matches}, NOT => shouldPass=${shouldPass}`);
+                    }
+                    return shouldPass;
+                }
+                
+                // Para condiciones normales, devolver matches tal cual
+                return matches;
+            });
                 // Si el valor es un string (del input de texto), puede tener múltiples valores separados por comas
                 let actualValue = value;
                 let valuesToCheck = [];
