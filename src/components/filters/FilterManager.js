@@ -2439,6 +2439,10 @@ function applyFilters() {
             const value = moduleFilterValues[column];
             if (!value || (Array.isArray(value) && value.length === 0)) return;
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
+            // Debug log para verificar condiciones NOT
+            if (condition === 'not_contains' || condition === 'not_equals') {
+                console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
+            }
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) {
@@ -2463,11 +2467,85 @@ function applyFilters() {
                     }
                     return isIncluded;
                 }
+                // Si el valor es un string (del input de texto), puede tener múltiples valores separados por comas
+                let actualValue = value;
+                let valuesToCheck = [];
+                if (typeof value === 'string' && value.includes(',')) {
+                    // Múltiples valores separados por comas
+                    valuesToCheck = value.split(',').map(v => v.trim()).filter(v => v !== '');
+                } else {
+                    // Un solo valor
+                    valuesToCheck = [value];
+                }
+                
+                // Si hay múltiples valores, verificar si alguno coincide
+                if (valuesToCheck.length > 1) {
+                    let anyMatches = false;
+                    for (const val of valuesToCheck) {
+                        let matches = false;
+                        switch (filterType) {
+                            case 'text':
+                                const normalizedCell = normalizeText(cellValue.toString());
+                                const normalizedVal = normalizeText(val);
+                                if (condition === 'equals' || condition === 'not_equals') {
+                                    matches = normalizedCell === normalizedVal;
+                                } else {
+                                    matches = normalizedCell.includes(normalizedVal);
+                                }
+                                break;
+                            case 'number':
+                                const numVal = parseFloat(val);
+                                const cellNum = parseFloat(cellValue);
+                                if (condition === 'equals' || condition === 'not_equals') {
+                                    matches = !isNaN(numVal) && !isNaN(cellNum) && cellNum === numVal;
+                                } else {
+                                    matches = !isNaN(numVal) && !isNaN(cellNum) && cellNum === numVal;
+                                }
+                                break;
+                            case 'categorical':
+                                if (condition === 'equals' || condition === 'not_equals') {
+                                    matches = cellValue.toString() === val;
+                                } else {
+                                    matches = cellValue.toString().includes(val) || val.includes(cellValue.toString());
+                                }
+                                break;
+                            default:
+                                // Fallback: tratar como texto
+                                const normalizedCell2 = normalizeText(cellValue.toString());
+                                const normalizedVal2 = normalizeText(val);
+                                if (condition === 'equals' || condition === 'not_equals') {
+                                    matches = normalizedCell2 === normalizedVal2;
+                                } else {
+                                    matches = normalizedCell2.includes(normalizedVal2);
+                                }
+                        }
+                        // Para NOT: si alguno coincide, no debe pasar
+                        // Para condiciones normales: si alguno coincide, debe pasar
+                        if (condition === 'not_contains' || condition === 'not_equals') {
+                            if (matches) {
+                                anyMatches = true;
+                                break; // Si alguno coincide, no debe pasar
+                            }
+                        } else {
+                            if (matches) {
+                                anyMatches = true;
+                                break; // Si alguno coincide, debe pasar
+                            }
+                        }
+                    }
+                    // Aplicar lógica NOT
+                    if (condition === 'not_contains' || condition === 'not_equals') {
+                        return !anyMatches; // Si ningún valor coincide, pasa el filtro
+                    }
+                    return anyMatches; // Si algún valor coincide, pasa el filtro
+                }
+                
+                // Un solo valor
                 let matches = false;
                 switch (filterType) {
                     case 'text':
                         const normalizedCell = normalizeText(cellValue.toString());
-                        const normalizedValue = normalizeText(value);
+                        const normalizedValue = normalizeText(actualValue);
                         if (condition === 'equals' || condition === 'not_equals') {
                             matches = normalizedCell === normalizedValue;
                         } else {
@@ -2475,7 +2553,7 @@ function applyFilters() {
                         }
                         break;
                     case 'number':
-                        const numValue = parseFloat(value);
+                        const numValue = parseFloat(actualValue);
                         const cellNum = parseFloat(cellValue);
                         if (condition === 'equals' || condition === 'not_equals') {
                             matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
@@ -2485,7 +2563,8 @@ function applyFilters() {
                         }
                         break;
                     case 'categorical':
-                        const selectedValues = value.split(',').map(v => v.trim());
+                        // Si el valor es un string con comas, tratarlo como múltiples valores
+                        const selectedValues = typeof actualValue === 'string' ? actualValue.split(',').map(v => v.trim()) : [actualValue];
                         if (condition === 'equals' || condition === 'not_equals') {
                             matches = selectedValues.includes(cellValue.toString());
                         } else {
@@ -2493,7 +2572,14 @@ function applyFilters() {
                         }
                         break;
                     default:
-                        matches = true;
+                        // Fallback: tratar como texto
+                        const normalizedCell3 = normalizeText(cellValue.toString());
+                        const normalizedValue3 = normalizeText(actualValue);
+                        if (condition === 'equals' || condition === 'not_equals') {
+                            matches = normalizedCell3 === normalizedValue3;
+                        } else {
+                            matches = normalizedCell3.includes(normalizedValue3);
+                        }
                 }
                 // Aplicar condición NOT
                 if (condition === 'not_contains' || condition === 'not_equals') {
