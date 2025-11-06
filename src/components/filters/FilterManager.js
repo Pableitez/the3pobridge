@@ -1501,8 +1501,11 @@ function generateFilterSidebar(headers) {
           textInput.addEventListener('input', (e) => {
             const val = e.target.value.trim();
             console.log('🔍 Text input event:', val);
-            // Si hay una coma, usar debounce. Si no, aplicar inmediatamente
+            // SIEMPRE aplicar handleTextInput para guardar el valor
+            // Si hay una coma, usar debounce para dar tiempo a escribir más valores
+            // Si no, aplicar inmediatamente
             if (val.includes(',')) {
+              // Múltiples valores: usar debounce para dar tiempo a escribir
               handleTextInputDebounced();
             } else if (val.length > 0) {
               // Para un solo valor, aplicar inmediatamente sin debounce
@@ -1513,9 +1516,11 @@ function generateFilterSidebar(headers) {
               handleTextInput();
             }
           });
+          
           textInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
+              // Forzar aplicación inmediata al presionar Enter
               handleTextInput();
             }
           });
@@ -1527,7 +1532,9 @@ function generateFilterSidebar(headers) {
           
           // También aplicar cuando se pierde el foco
           textInput.addEventListener('blur', () => {
-            if (textInput.value.trim()) {
+            const val = textInput.value.trim();
+            if (val) {
+              console.log('🔍 Text input blur event, applying filter for:', val);
               handleTextInput();
             }
           });

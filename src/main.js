@@ -2625,11 +2625,20 @@ function setupFilterEvents() {
               // Esto guardará el valor en moduleFilterValues
               filterDiv.handleTextInput();
               console.log('✅ Applied text input for column:', filterDiv.dataset.column);
+              
+              // Verificar que se guardó correctamente
+              const savedValue = getModuleFilterValues()[filterDiv.dataset.column];
+              console.log('🔍 Verify saved value after Apply:', {
+                column: filterDiv.dataset.column,
+                savedValue: savedValue,
+                type: typeof savedValue,
+                isArray: Array.isArray(savedValue)
+              });
             }
           }
         });
         
-        // Aplicar filtros inmediatamente (handleTextInput ya guarda los valores)
+        // Aplicar filtros inmediatamente (handleTextInput ya guarda los valores sincrónicamente)
         filterManager.applyFilters();
         updateActiveFiltersSummary();
         renderActiveFiltersSummaryChips();
