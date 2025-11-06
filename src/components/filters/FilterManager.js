@@ -1361,18 +1361,58 @@ function generateFilterSidebar(headers) {
           textInputWrapper.className = 'filter-text-input-wrapper';
           textInputWrapper.style.marginBottom = '0.5rem';
           
+          // Contenedor para input y botón
+          const textInputContainer = document.createElement('div');
+          textInputContainer.style.display = 'flex';
+          textInputContainer.style.gap = '0.5rem';
+          textInputContainer.style.alignItems = 'stretch';
+          
           const textInput = document.createElement('input');
           textInput.type = 'text';
           textInput.className = 'filter-text-input';
           textInput.placeholder = `Type a value to filter...`;
           textInput.autocomplete = 'off';
-          textInput.style.width = '100%';
+          textInput.style.flex = '1';
           textInput.style.padding = '0.4rem';
           textInput.style.borderRadius = '4px';
           textInput.style.border = '1px solid var(--border-color)';
           textInput.style.backgroundColor = '#1a2332';
           textInput.style.color = '#ffffff';
           textInput.style.fontSize = '0.9rem';
+          
+          // Botón para aplicar el filtro manualmente
+          const applyTextInputBtn = document.createElement('button');
+          applyTextInputBtn.type = 'button';
+          applyTextInputBtn.textContent = 'Apply';
+          applyTextInputBtn.className = 'filter-text-apply-btn';
+          applyTextInputBtn.style.padding = '0.4rem 0.8rem';
+          applyTextInputBtn.style.borderRadius = '4px';
+          applyTextInputBtn.style.border = '1px solid rgba(71, 178, 229, 0.4)';
+          applyTextInputBtn.style.backgroundColor = 'rgba(71, 178, 229, 0.2)';
+          applyTextInputBtn.style.color = '#47B2E5';
+          applyTextInputBtn.style.cursor = 'pointer';
+          applyTextInputBtn.style.fontSize = '0.85rem';
+          applyTextInputBtn.style.fontWeight = '500';
+          applyTextInputBtn.style.whiteSpace = 'nowrap';
+          applyTextInputBtn.style.transition = 'all 0.2s ease';
+          
+          applyTextInputBtn.addEventListener('mouseenter', () => {
+            applyTextInputBtn.style.backgroundColor = 'rgba(71, 178, 229, 0.3)';
+            applyTextInputBtn.style.borderColor = 'rgba(71, 178, 229, 0.6)';
+          });
+          
+          applyTextInputBtn.addEventListener('mouseleave', () => {
+            applyTextInputBtn.style.backgroundColor = 'rgba(71, 178, 229, 0.2)';
+            applyTextInputBtn.style.borderColor = 'rgba(71, 178, 229, 0.4)';
+          });
+          
+          applyTextInputBtn.addEventListener('click', () => {
+            console.log('🔘 Apply button clicked for text input');
+            handleTextInput();
+          });
+          
+          textInputContainer.appendChild(textInput);
+          textInputContainer.appendChild(applyTextInputBtn);
           
           // Cargar valor guardado si existe
           const savedTextValue = getModuleFilterValues()[selectedColumn];
@@ -1539,7 +1579,7 @@ function generateFilterSidebar(headers) {
             }
           });
           
-          textInputWrapper.appendChild(textInput);
+          textInputWrapper.appendChild(textInputContainer);
           filterDiv.appendChild(textInputWrapper);
           
           const dropdownWrapper = document.createElement('div');
