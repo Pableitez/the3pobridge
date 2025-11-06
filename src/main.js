@@ -3156,8 +3156,14 @@ function applyDashboardQuickFilters() {
         const value = filterObj.filterValues[key];
         // Copiar también las condiciones (_condition)
         if (key.endsWith('_condition')) {
-          // Si ya existe una condición, mantener la del último filtro aplicado
-          combinedFilterValues[key] = value;
+          // IMPORTANTE: Preservar la condición para la columna correspondiente
+          // La condición debe estar asociada a la columna base (sin _condition)
+          const baseColumn = key.replace('_condition', '');
+          // Si ya existe una condición para esta columna, mantener la del último filtro aplicado
+          // Pero solo si no hay conflicto (ambos filtros tienen la misma columna)
+          if (!combinedFilterValues[key] || combinedFilterValues[key] === value) {
+            combinedFilterValues[key] = value;
+          }
           continue;
         }
         if (combinedFilterValues[key]) {
@@ -3166,14 +3172,30 @@ function applyDashboardQuickFilters() {
             const arr2 = Array.isArray(value) ? value : [value];
             combinedFilterValues[key] = Array.from(new Set([...arr1, ...arr2]));
             combinedActiveFilters[key] = 'categorical';
+            // Preservar la condición si existe para esta columna
+            const conditionKey = `${key}_condition`;
+            if (filterObj.filterValues[conditionKey] && !combinedFilterValues[conditionKey]) {
+              combinedFilterValues[conditionKey] = filterObj.filterValues[conditionKey];
+            }
           } else {
             if (combinedFilterValues[key] !== value) {
               combinedFilterValues[key] = [combinedFilterValues[key], value];
               combinedActiveFilters[key] = 'categorical';
+              // Preservar la condición si existe para esta columna
+              const conditionKey = `${key}_condition`;
+              if (filterObj.filterValues[conditionKey] && !combinedFilterValues[conditionKey]) {
+                combinedFilterValues[conditionKey] = filterObj.filterValues[conditionKey];
+              }
             }
           }
         } else {
           combinedFilterValues[key] = value;
+          // Copiar la condición asociada si existe
+          const conditionKey = `${key}_condition`;
+          if (filterObj.filterValues[conditionKey]) {
+            combinedFilterValues[conditionKey] = filterObj.filterValues[conditionKey];
+            console.log(`🔍 Copied condition "${conditionKey}" = "${filterObj.filterValues[conditionKey]}" for column "${key}"`);
+          }
           if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
             const base = key.replace(/_(start|end|empty)$/, '');
             combinedActiveFilters[base] = 'date';
@@ -6568,8 +6590,12 @@ function applyOpsHubQuickFilters() {
         const value = savedFilterValues[key];
         // Copiar también las condiciones (_condition)
         if (key.endsWith('_condition')) {
-          // Si ya existe una condición, mantener la del último filtro aplicado
-          combinedFilterValues[key] = value;
+          // IMPORTANTE: Preservar la condición para la columna correspondiente
+          // Si ya existe una condición para esta columna, mantener la del último filtro aplicado
+          if (!combinedFilterValues[key] || combinedFilterValues[key] === value) {
+            combinedFilterValues[key] = value;
+            console.log(`🔍 Copied condition "${key}" = "${value}" from quick filter "${name}"`);
+          }
           continue;
         }
         if (combinedFilterValues[key]) {
@@ -6578,14 +6604,32 @@ function applyOpsHubQuickFilters() {
             const arr2 = Array.isArray(value) ? value : [value];
             combinedFilterValues[key] = Array.from(new Set([...arr1, ...arr2]));
             combinedActiveFilters[key] = 'categorical';
+            // Preservar la condición si existe para esta columna
+            const conditionKey = `${key}_condition`;
+            if (savedFilterValues[conditionKey] && !combinedFilterValues[conditionKey]) {
+              combinedFilterValues[conditionKey] = savedFilterValues[conditionKey];
+              console.log(`🔍 Copied condition "${conditionKey}" = "${savedFilterValues[conditionKey]}" when combining values for column "${key}"`);
+            }
           } else {
             if (combinedFilterValues[key] !== value) {
               combinedFilterValues[key] = [combinedFilterValues[key], value];
               combinedActiveFilters[key] = 'categorical';
+              // Preservar la condición si existe para esta columna
+              const conditionKey = `${key}_condition`;
+              if (savedFilterValues[conditionKey] && !combinedFilterValues[conditionKey]) {
+                combinedFilterValues[conditionKey] = savedFilterValues[conditionKey];
+                console.log(`🔍 Copied condition "${conditionKey}" = "${savedFilterValues[conditionKey]}" when combining values for column "${key}"`);
+              }
             }
           }
         } else {
           combinedFilterValues[key] = value;
+          // Copiar la condición asociada si existe
+          const conditionKey = `${key}_condition`;
+          if (savedFilterValues[conditionKey]) {
+            combinedFilterValues[conditionKey] = savedFilterValues[conditionKey];
+            console.log(`🔍 Copied condition "${conditionKey}" = "${savedFilterValues[conditionKey]}" for column "${key}" from quick filter "${name}"`);
+          }
           // Usar el tipo de filtro guardado si está disponible
           if (savedActiveFilters[key]) {
             combinedActiveFilters[key] = savedActiveFilters[key];
@@ -6613,8 +6657,11 @@ function applyOpsHubQuickFilters() {
         const value = filterObj.filterValues[key];
         // Copiar también las condiciones (_condition)
         if (key.endsWith('_condition')) {
-          // Si ya existe una condición, mantener la del último filtro aplicado
-          combinedFilterValues[key] = value;
+          // IMPORTANTE: Preservar la condición para la columna correspondiente
+          if (!combinedFilterValues[key] || combinedFilterValues[key] === value) {
+            combinedFilterValues[key] = value;
+            console.log(`🔍 Copied condition "${key}" = "${value}" from urgency quick filter`);
+          }
           continue;
         }
         if (combinedFilterValues[key]) {
@@ -6623,14 +6670,32 @@ function applyOpsHubQuickFilters() {
             const arr2 = Array.isArray(value) ? value : [value];
             combinedFilterValues[key] = Array.from(new Set([...arr1, ...arr2]));
             combinedActiveFilters[key] = 'categorical';
+            // Preservar la condición si existe para esta columna
+            const conditionKey = `${key}_condition`;
+            if (filterObj.filterValues[conditionKey] && !combinedFilterValues[conditionKey]) {
+              combinedFilterValues[conditionKey] = filterObj.filterValues[conditionKey];
+              console.log(`🔍 Copied condition "${conditionKey}" = "${filterObj.filterValues[conditionKey]}" when combining urgency values for column "${key}"`);
+            }
           } else {
             if (combinedFilterValues[key] !== value) {
               combinedFilterValues[key] = [combinedFilterValues[key], value];
               combinedActiveFilters[key] = 'categorical';
+              // Preservar la condición si existe para esta columna
+              const conditionKey = `${key}_condition`;
+              if (filterObj.filterValues[conditionKey] && !combinedFilterValues[conditionKey]) {
+                combinedFilterValues[conditionKey] = filterObj.filterValues[conditionKey];
+                console.log(`🔍 Copied condition "${conditionKey}" = "${filterObj.filterValues[conditionKey]}" when combining urgency values for column "${key}"`);
+              }
             }
           }
         } else {
           combinedFilterValues[key] = value;
+          // Copiar la condición asociada si existe
+          const conditionKey = `${key}_condition`;
+          if (filterObj.filterValues[conditionKey]) {
+            combinedFilterValues[conditionKey] = filterObj.filterValues[conditionKey];
+            console.log(`🔍 Copied condition "${conditionKey}" = "${filterObj.filterValues[conditionKey]}" for column "${key}" from urgency quick filter`);
+          }
           if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
             const base = key.replace(/_(start|end|empty)$/, '');
             combinedActiveFilters[base] = 'date';
