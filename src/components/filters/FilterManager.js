@@ -1632,11 +1632,14 @@ function generateFilterSidebar(headers) {
               // Preservar la condición al actualizar los valores
               const currentValues = { ...getModuleFilterValues() };
               currentValues[selectedColumn] = Array.from(selectedSet);
-              // Asegurar que la condición se preserve
+              // IMPORTANTE: Preservar la condición actual, o usar 'contains' como default
               const conditionKey = `${selectedColumn}_condition`;
+              // Si no existe una condición guardada, usar 'contains' como default
               if (!currentValues[conditionKey]) {
                 currentValues[conditionKey] = 'contains';
               }
+              // La condición ya está en currentValues si existía, así que se preserva automáticamente
+              console.log(`💾 Select All clicked for "${selectedColumn}", preserving condition: "${currentValues[conditionKey]}"`);
               setModuleFilterValues(currentValues);
               filterDiv.classList.add('active');
               renderCheckboxList();
