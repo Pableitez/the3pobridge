@@ -1361,18 +1361,12 @@ function generateFilterSidebar(headers) {
           textInputWrapper.className = 'filter-text-input-wrapper';
           textInputWrapper.style.marginBottom = '0.5rem';
           
-          // Contenedor para input y botón
-          const textInputContainer = document.createElement('div');
-          textInputContainer.style.display = 'flex';
-          textInputContainer.style.gap = '0.5rem';
-          textInputContainer.style.alignItems = 'stretch';
-          
           const textInput = document.createElement('input');
           textInput.type = 'text';
           textInput.className = 'filter-text-input';
           textInput.placeholder = `Type a value to filter...`;
           textInput.autocomplete = 'off';
-          textInput.style.flex = '1';
+          textInput.style.width = '100%';
           textInput.style.padding = '0.4rem';
           textInput.style.borderRadius = '4px';
           textInput.style.border = '1px solid var(--border-color)';
@@ -1380,65 +1374,11 @@ function generateFilterSidebar(headers) {
           textInput.style.color = '#ffffff';
           textInput.style.fontSize = '0.9rem';
           
-          // Botón para aplicar el filtro manualmente
-          const applyTextInputBtn = document.createElement('button');
-          applyTextInputBtn.type = 'button';
-          applyTextInputBtn.textContent = 'Apply';
-          applyTextInputBtn.className = 'filter-text-apply-btn';
-          applyTextInputBtn.style.padding = '0.4rem 0.8rem';
-          applyTextInputBtn.style.borderRadius = '4px';
-          applyTextInputBtn.style.border = '1px solid rgba(71, 178, 229, 0.4)';
-          applyTextInputBtn.style.backgroundColor = 'rgba(71, 178, 229, 0.2)';
-          applyTextInputBtn.style.color = '#47B2E5';
-          applyTextInputBtn.style.cursor = 'pointer';
-          applyTextInputBtn.style.fontSize = '0.85rem';
-          applyTextInputBtn.style.fontWeight = '500';
-          applyTextInputBtn.style.whiteSpace = 'nowrap';
-          applyTextInputBtn.style.transition = 'all 0.2s ease';
-          
-          applyTextInputBtn.addEventListener('mouseenter', () => {
-            applyTextInputBtn.style.backgroundColor = 'rgba(71, 178, 229, 0.3)';
-            applyTextInputBtn.style.borderColor = 'rgba(71, 178, 229, 0.6)';
-          });
-          
-          applyTextInputBtn.addEventListener('mouseleave', () => {
-            applyTextInputBtn.style.backgroundColor = 'rgba(71, 178, 229, 0.2)';
-            applyTextInputBtn.style.borderColor = 'rgba(71, 178, 229, 0.4)';
-          });
-          
-          applyTextInputBtn.addEventListener('click', () => {
-            console.log('🔘 Apply button clicked for text input, value:', textInput.value);
-            const val = textInput.value.trim();
-            if (val) {
-              console.log('🔘 Calling handleTextInput with value:', val);
-              handleTextInput();
-              console.log('🔘 After handleTextInput, moduleFilterValues:', getModuleFilterValues());
-              console.log('🔘 After handleTextInput, moduleActiveFilters:', getModuleActiveFilters());
-              // Forzar aplicación inmediata de filtros
-              applyFilters();
-            } else {
-              console.log('⚠️ Empty value, not applying filter');
-            }
-          });
-          
-          textInputContainer.appendChild(textInput);
-          textInputContainer.appendChild(applyTextInputBtn);
-          
           // Cargar valor guardado si existe
           const savedTextValue = getModuleFilterValues()[selectedColumn];
-          console.log('🔍 Loading saved value for', selectedColumn, ':', savedTextValue, 'type:', typeof savedTextValue, 'isArray:', Array.isArray(savedTextValue));
-          
-          if (savedTextValue) {
-            if (typeof savedTextValue === 'string' && !Array.isArray(savedTextValue)) {
-              // Valor string (un solo valor del textInput)
-              textInput.value = savedTextValue;
-              filterDiv.classList.add('active');
-              console.log('✅ Loaded string value into textInput:', savedTextValue);
-            } else if (Array.isArray(savedTextValue) && savedTextValue.length > 0) {
-              // Valor array (múltiples valores o checkboxes)
-              // No poner nada en textInput si hay valores de checkbox
-              console.log('✅ Found array value, not loading into textInput');
-            }
+          if (savedTextValue && typeof savedTextValue === 'string' && !Array.isArray(savedTextValue)) {
+            textInput.value = savedTextValue;
+            filterDiv.classList.add('active');
           }
           
           // Aplicar filtro cuando se escribe
@@ -1446,14 +1386,10 @@ function generateFilterSidebar(headers) {
             const textValue = textInput.value.trim();
             const condition = getModuleFilterValues()[`${selectedColumn}_condition`] || 'contains';
             
-            console.log('🔍 handleTextInput called with textValue:', textValue);
-            
             if (textValue) {
               // Si hay un valor escrito, usar ese valor como filtro
               // Soporte para múltiples valores separados por comas
               const values = textValue.split(',').map(v => v.trim()).filter(v => v !== '');
-              
-              console.log('🔍 Processed values array:', values, 'length:', values.length);
               
               if (values.length === 0) {
                 // Si no hay valores válidos después de filtrar, limpiar
@@ -1480,43 +1416,16 @@ function generateFilterSidebar(headers) {
               }
               
               const currentValues = { ...getModuleFilterValues() };
-              // SIEMPRE guardar como string para un solo valor, o como array para múltiples
-              // Esto asegura que la lógica de filtrado funcione correctamente
+              // Si hay múltiples valores, guardarlos como array, si no, como string
               if (values.length > 1) {
-                // Múltiples valores: guardar como array
                 currentValues[selectedColumn] = values;
-                console.log('💾 Saving multiple values as array:', values);
-              } else if (values.length === 1) {
-                // Un solo valor: guardar como string (no como array)
-                currentValues[selectedColumn] = values[0];
-                console.log('💾 Saving single value as string:', values[0], 'type:', typeof values[0]);
               } else {
-                // No hay valores válidos, no debería llegar aquí
-                console.warn('⚠️ No valid values to save!');
-                return;
+                currentValues[selectedColumn] = values[0];
               }
               currentValues[`${selectedColumn}_condition`] = condition;
-              
-              console.log(`💾 About to save filter for "${selectedColumn}":`, {
-                value: currentValues[selectedColumn],
-                condition: condition,
-                isArray: Array.isArray(currentValues[selectedColumn]),
-                type: typeof currentValues[selectedColumn],
-                fullObject: currentValues
-              });
-              
               setModuleFilterValues(currentValues);
               setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
               filterDiv.classList.add('active');
-              
-              // Verificar que se guardó correctamente
-              const savedValue = getModuleFilterValues()[selectedColumn];
-              console.log(`✅ Text input filter applied for "${selectedColumn}":`, {
-                savedValue: savedValue,
-                savedType: typeof savedValue,
-                savedIsArray: Array.isArray(savedValue),
-                condition: getModuleFilterValues()[`${selectedColumn}_condition`]
-              });
               
               // Aplicar filtros inmediatamente
               updateActiveFiltersSummary();
@@ -1544,25 +1453,17 @@ function generateFilterSidebar(headers) {
             }
           };
           
-          // Debounced version para mientras escribe
-          const handleTextInputDebounced = debounce(handleTextInput, 300);
+          // Debounced version para mientras escribe (delay corto para mejor UX)
+          const handleTextInputDebounced = debounce(handleTextInput, 200);
           
-          // Aplicar inmediatamente cuando se escribe (sin debounce para valores únicos)
+          // Aplicar inmediatamente mientras escribe (sin esperar a la coma)
           textInput.addEventListener('input', (e) => {
             const val = e.target.value.trim();
-            console.log('🔍 Text input event:', val);
-            // SIEMPRE aplicar handleTextInput para guardar el valor
-            // Si hay una coma, usar debounce para dar tiempo a escribir más valores
-            // Si no, aplicar inmediatamente
-            if (val.includes(',')) {
-              // Múltiples valores: usar debounce para dar tiempo a escribir
+            // Aplicar inmediatamente si hay contenido, con debounce corto para evitar demasiadas llamadas
+            if (val.length > 0) {
               handleTextInputDebounced();
-            } else if (val.length > 0) {
-              // Para un solo valor, aplicar inmediatamente sin debounce
-              console.log('🔍 Single value detected, applying immediately');
-              handleTextInput();
             } else {
-              // Si está vacío, también aplicar para limpiar
+              // Si está vacío, aplicar inmediatamente para limpiar
               handleTextInput();
             }
           });
@@ -1570,7 +1471,6 @@ function generateFilterSidebar(headers) {
           textInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              // Forzar aplicación inmediata al presionar Enter
               handleTextInput();
             }
           });
@@ -1582,14 +1482,12 @@ function generateFilterSidebar(headers) {
           
           // También aplicar cuando se pierde el foco
           textInput.addEventListener('blur', () => {
-            const val = textInput.value.trim();
-            if (val) {
-              console.log('🔍 Text input blur event, applying filter for:', val);
+            if (textInput.value.trim()) {
               handleTextInput();
             }
           });
           
-          textInputWrapper.appendChild(textInputContainer);
+          textInputWrapper.appendChild(textInput);
           filterDiv.appendChild(textInputWrapper);
           
           const dropdownWrapper = document.createElement('div');
@@ -1919,13 +1817,6 @@ function generateFilterSidebar(headers) {
             updateInputSummary();
           });
           function updateInputSummary() {
-            // Solo actualizar el input del dropdown si no hay un valor en el textInput
-            const textInputValue = textInput ? textInput.value.trim() : '';
-            if (textInputValue) {
-              // Si hay un valor en el textInput, no actualizar el input del dropdown
-              return;
-            }
-            
             const selected = Array.from(selectedSet).filter(v => v !== '__EMPTY__');
             if (selectedSet.has('__EMPTY__')) {
               input.value = '(Empty)';
@@ -1937,17 +1828,9 @@ function generateFilterSidebar(headers) {
               input.value = `${selected.length} selected`;
             }
           }
-          // Cargar valores guardados (solo si son arrays, no strings del textInput)
-          const savedValue = getModuleFilterValues()[selectedColumn];
-          if (Array.isArray(savedValue)) {
-            selectedSet = new Set(savedValue);
+          if (Array.isArray(getModuleFilterValues()[selectedColumn])) {
+            selectedSet = new Set(getModuleFilterValues()[selectedColumn]);
             updateInputSummary();
-          } else if (typeof savedValue === 'string' && savedValue.trim() !== '') {
-            // Si hay un valor string guardado, asegurarse de que el textInput lo tenga
-            if (textInput && textInput.value !== savedValue) {
-              textInput.value = savedValue;
-              filterDiv.classList.add('active');
-            }
           }
           filterDiv.appendChild(dropdownWrapper);
         }
@@ -2489,12 +2372,8 @@ function applyFilters() {
 
     let filteredData = [...data];
 
-    console.log('🔍 applyFilters() called with moduleActiveFilters:', moduleActiveFilters);
-    console.log('🔍 applyFilters() called with moduleFilterValues:', moduleFilterValues);
-    
     // Aplicar filtros del módulo
     Object.entries(moduleActiveFilters).forEach(([column, filterType]) => {
-        console.log(`🔍 Processing filter for column "${column}" with type "${filterType}"`);
         if (filterType === 'date') {
             const arr = Array.isArray(moduleFilterValues[column]) ? moduleFilterValues[column] : null;
             const hasRange = moduleFilterValues[`${column}_start`] || moduleFilterValues[`${column}_end`] || moduleFilterValues[`${column}_empty`];
@@ -2550,24 +2429,9 @@ function applyFilters() {
             return;
         } else {
             const value = moduleFilterValues[column];
-            console.log(`🔍 Checking value for column "${column}":`, value, 'type:', typeof value, 'isArray:', Array.isArray(value));
-            
-            // Verificar que el valor existe y no está vacío
-            if (!value) {
-              console.log(`⚠️ No value found for column "${column}" - skipping filter`);
-              return;
-            }
-            if (Array.isArray(value) && value.length === 0) {
-              console.log(`⚠️ Empty array for column "${column}" - skipping filter`);
-              return;
-            }
-            if (typeof value === 'string' && value.trim() === '') {
-              console.log(`⚠️ Empty string for column "${column}" - skipping filter`);
-              return;
-            }
-            
+            if (!value || (Array.isArray(value) && value.length === 0)) return;
             const condition = moduleFilterValues[`${column}_condition`] || 'contains';
-            console.log(`✅ Filtering column "${column}" with condition "${condition}" and value:`, value, 'type:', typeof value, 'isArray:', Array.isArray(value), 'value length:', typeof value === 'string' ? value.length : 'N/A');
+            console.log(`🔍 Filtering column "${column}" with condition "${condition}" and value:`, value);
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) {
@@ -2592,40 +2456,25 @@ function applyFilters() {
                     }
                     return isIncluded;
                 }
-                // Valor es un string (un solo valor del input de texto)
                 let matches = false;
-                // Asegurar que value sea string para procesarlo correctamente
-                const stringValue = typeof value === 'string' ? value : String(value);
-                
-                console.log(`🔍 Processing single string value for "${column}":`, {
-                  stringValue: stringValue,
-                  cellValue: cellValue,
-                  filterType: filterType,
-                  condition: condition
-                });
-                
                 switch (filterType) {
                     case 'text':
                         const normalizedCell = normalizeText(cellValue.toString());
-                        const normalizedValue = normalizeText(stringValue);
+                        const normalizedValue = normalizeText(value);
                         if (condition === 'equals' || condition === 'not_equals') {
                             matches = normalizedCell === normalizedValue;
                         } else {
-                            // contains o not_contains
                             matches = normalizedCell.includes(normalizedValue);
                         }
-                        console.log(`  → Text match result: ${matches} (cell: "${normalizedCell}", filter: "${normalizedValue}")`);
                         break;
                     case 'number':
-                        const numValue = parseFloat(stringValue);
+                        const numValue = parseFloat(value);
                         const cellNum = parseFloat(cellValue);
                         matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
-                        console.log(`  → Number match result: ${matches}`);
                         break;
                     case 'categorical':
-                        const selectedValues = stringValue.split(',').map(v => v.trim());
+                        const selectedValues = value.split(',').map(v => v.trim());
                         matches = selectedValues.includes(cellValue.toString());
-                        console.log(`  → Categorical match result: ${matches}`);
                         break;
                     default:
                         matches = true;
