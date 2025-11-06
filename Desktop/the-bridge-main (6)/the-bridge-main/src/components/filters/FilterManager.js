@@ -565,6 +565,7 @@ function generateFilterSidebar(headers) {
           delete updated[`${column}_end`];
           delete updated[`${column}_empty`];
           delete updated[column];
+          delete updated[`${column}_condition`];
           setModuleFilterValues(updated);
           // Eliminar de activeFilters SIEMPRE
           activeFilters = { ...getModuleActiveFilters() };
@@ -942,6 +943,7 @@ function generateFilterSidebar(headers) {
           delete updated[`${selectedColumn}_end`];
           delete updated[`${selectedColumn}_empty`];
           delete updated[selectedColumn];
+          delete updated[`${selectedColumn}_condition`];
           setModuleFilterValues(updated);
           
           // Eliminar de activeFilters
@@ -1297,6 +1299,54 @@ function generateFilterSidebar(headers) {
           if (type === 'date') {
             uniqueValues = uniqueValues.map(val => toISODateString(val));
           }
+          
+          // Crear selector de condición
+          const conditionWrapper = document.createElement('div');
+          conditionWrapper.className = 'filter-condition-wrapper';
+          conditionWrapper.style.marginBottom = '0.5rem';
+          
+          const conditionSelect = document.createElement('select');
+          conditionSelect.className = 'filter-condition-select';
+          conditionSelect.style.width = '100%';
+          conditionSelect.style.padding = '0.4rem';
+          conditionSelect.style.borderRadius = '4px';
+          conditionSelect.style.border = '1px solid var(--border-color)';
+          conditionSelect.style.backgroundColor = '#1a2332';
+          conditionSelect.style.color = '#ffffff';
+          conditionSelect.style.fontSize = '0.9rem';
+          
+          // Opciones de condición
+          const conditions = [
+            { value: 'contains', label: 'Contains' },
+            { value: 'equals', label: 'Equals' },
+            { value: 'not_contains', label: 'Not Contains' },
+            { value: 'not_equals', label: 'Not Equals' }
+          ];
+          
+          conditions.forEach(cond => {
+            const option = document.createElement('option');
+            option.value = cond.value;
+            option.textContent = cond.label;
+            conditionSelect.appendChild(option);
+          });
+          
+          // Cargar condición guardada si existe
+          const savedCondition = getModuleFilterValues()[`${selectedColumn}_condition`] || 'contains';
+          conditionSelect.value = savedCondition;
+          
+          // Guardar condición cuando cambie
+          conditionSelect.addEventListener('change', () => {
+            const key = `${selectedColumn}_condition`;
+            setModuleFilterValues({ ...getModuleFilterValues(), [key]: conditionSelect.value });
+            // Reaplicar filtros con la nueva condición
+            applyFilters();
+            updateActiveFiltersSummary();
+            renderActiveFiltersSummaryChips();
+          });
+          
+          conditionWrapper.appendChild(conditionSelect);
+          filterDiv.appendChild(conditionWrapper);
+          
           const dropdownWrapper = document.createElement('div');
           dropdownWrapper.className = 'modal-filter-dropdown-wrapper';
           dropdownWrapper.style.position = 'relative';
@@ -1734,6 +1784,7 @@ function generateFilterSidebar(headers) {
             delete updated[`${column}_end`];
             delete updated[`${column}_empty`];
           delete updated[column];
+          delete updated[`${column}_condition`];
             setModuleFilterValues(updated);
           // Eliminar de activeFilters SIEMPRE
           const activeFilters = { ...getModuleActiveFilters() };
@@ -1848,6 +1899,18 @@ function generateFilterSidebar(headers) {
         }
         setModuleActiveFilters(newActiveFilters);
         generateFilterSidebar(headers);
+        // Restaurar condiciones en los selectores después de regenerar el sidebar
+        setTimeout(() => {
+          Object.keys(filterObj.filterValues).forEach(key => {
+            if (key.endsWith('_condition')) {
+              const column = key.replace('_condition', '');
+              const conditionSelect = document.querySelector(`.filter-item[data-column="${column}"] .filter-condition-select`);
+              if (conditionSelect) {
+                conditionSelect.value = filterObj.filterValues[key];
+              }
+            }
+          });
+        }, 100);
         // Forzar que la pestaña y panel de My Filters estén activos
         const myFiltersTab = document.querySelector('.filter-tab[data-target="myfilters"]');
         const myFiltersPanel = document.getElementById('myfiltersFilterPanel');
@@ -2167,28 +2230,59 @@ function applyFilters() {
         } else {
             const value = moduleFilterValues[column];
             if (!value || (Array.isArray(value) && value.length === 0)) return;
+            const condition = moduleFilterValues[`${column}_condition`] || 'contains';
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
-                if (cellValue === null || cellValue === undefined) return false;
-                if (Array.isArray(value)) {
-                    if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
+                if (cellValue === null || cellValue === undefined) {
+                    // Para condiciones NOT, los valores null/undefined pueden pasar
+                    if (condition === 'not_contains' || condition === 'not_equals') {
                         return true;
                     }
-                    return value.includes(cellValue?.toString());
+                    return false;
                 }
+                if (Array.isArray(value)) {
+                    if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
+                        // Para condiciones NOT, si está vacío y buscamos empty, no debe pasar
+                        if (condition === 'not_contains' || condition === 'not_equals') {
+                            return false;
+                        }
+                        return true;
+                    }
+                    const isIncluded = value.includes(cellValue?.toString());
+                    // Aplicar condición NOT
+                    if (condition === 'not_contains' || condition === 'not_equals') {
+                        return !isIncluded;
+                    }
+                    return isIncluded;
+                }
+                let matches = false;
                 switch (filterType) {
                     case 'text':
-                        return normalizeText(cellValue.toString()).includes(normalizeText(value));
+                        const normalizedCell = normalizeText(cellValue.toString());
+                        const normalizedValue = normalizeText(value);
+                        if (condition === 'equals' || condition === 'not_equals') {
+                            matches = normalizedCell === normalizedValue;
+                        } else {
+                            matches = normalizedCell.includes(normalizedValue);
+                        }
+                        break;
                     case 'number':
                         const numValue = parseFloat(value);
                         const cellNum = parseFloat(cellValue);
-                        return !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+                        matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+                        break;
                     case 'categorical':
                         const selectedValues = value.split(',').map(v => v.trim());
-                        return selectedValues.includes(cellValue.toString());
+                        matches = selectedValues.includes(cellValue.toString());
+                        break;
                     default:
-                        return true;
+                        matches = true;
                 }
+                // Aplicar condición NOT
+                if (condition === 'not_contains' || condition === 'not_equals') {
+                    return !matches;
+                }
+                return matches;
             });
         }
     });
@@ -2434,6 +2528,7 @@ export function renderActiveFiltersSummaryChips() {
         delete updated[`${column}_end`];
         delete updated[`${column}_empty`];
       delete updated[column];
+      delete updated[`${column}_condition`];
         setModuleFilterValues(updated);
       // Quitar resaltado si ya no hay nada filtrado
         const filterItem = document.querySelector(`.filter-item[data-column="${column}"]`);
@@ -2626,28 +2721,59 @@ function getFilteredData() {
     }
     const value = filterValues[column];
     if (!value || (Array.isArray(value) && value.length === 0)) return;
+    const condition = filterValues[`${column}_condition`] || 'contains';
     filteredData = filteredData.filter(row => {
       const cellValue = row[column];
-      if (cellValue === null || cellValue === undefined) return false;
-      if (Array.isArray(value)) {
-        if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
+      if (cellValue === null || cellValue === undefined) {
+        // Para condiciones NOT, los valores null/undefined pueden pasar
+        if (condition === 'not_contains' || condition === 'not_equals') {
           return true;
         }
-        return value.includes(cellValue?.toString());
+        return false;
       }
+      if (Array.isArray(value)) {
+        if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
+          // Para condiciones NOT, si está vacío y buscamos empty, no debe pasar
+          if (condition === 'not_contains' || condition === 'not_equals') {
+            return false;
+          }
+          return true;
+        }
+        const isIncluded = value.includes(cellValue?.toString());
+        // Aplicar condición NOT
+        if (condition === 'not_contains' || condition === 'not_equals') {
+          return !isIncluded;
+        }
+        return isIncluded;
+      }
+      let matches = false;
       switch (filterType) {
         case 'text':
-          return normalizeText(cellValue.toString()).includes(normalizeText(value));
+          const normalizedCell = normalizeText(cellValue.toString());
+          const normalizedValue = normalizeText(value);
+          if (condition === 'equals' || condition === 'not_equals') {
+            matches = normalizedCell === normalizedValue;
+          } else {
+            matches = normalizedCell.includes(normalizedValue);
+          }
+          break;
         case 'number':
           const numValue = parseFloat(value);
           const cellNum = parseFloat(cellValue);
-          return !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+          matches = !isNaN(numValue) && !isNaN(cellNum) && cellNum === numValue;
+          break;
         case 'categorical':
           const selectedValues = value.split(',').map(v => v.trim());
-          return selectedValues.includes(cellValue.toString());
+          matches = selectedValues.includes(cellValue.toString());
+          break;
         default:
-          return true;
+          matches = true;
       }
+      // Aplicar condición NOT
+      if (condition === 'not_contains' || condition === 'not_equals') {
+        return !matches;
+      }
+      return matches;
     });
   });
   const sortConfig = getSortConfig();
