@@ -2021,59 +2021,69 @@ function generateFilterSidebar(headers) {
 
     // --- Guardar y cargar filtros ---
     function saveMyFilter(name, urgencyCard) {
-  const headers = Object.keys(getOriginalData()[0] || {});
-  const headerHash = getHeaderHash(headers);
-  const filters = loadMyFilters();
-  const filterValuesToSave = { ...getModuleFilterValues() };
-  
-  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM (prioridad)
-  const filterItems = document.querySelectorAll('.filter-item');
-  filterItems.forEach(item => {
-    const column = item.dataset.column;
-    if (!column) return;
-    
-    // Buscar el selector de condición en este filtro
-    const conditionSelect = item.querySelector('.filter-condition-select');
-    if (conditionSelect && conditionSelect.value) {
-      const conditionKey = `${column}_condition`;
-      filterValuesToSave[conditionKey] = conditionSelect.value;
-    }
-  });
-  
-  // Asegurar que TODAS las columnas con filtros activos tengan una condición guardada
-  const activeFilters = getModuleActiveFilters();
-  Object.keys(activeFilters).forEach(column => {
-    const conditionKey = `${column}_condition`;
-    // Si no hay condición guardada (ni del DOM ni del estado), usar 'contains' como default
-    if (!filterValuesToSave[conditionKey]) {
-      filterValuesToSave[conditionKey] = 'contains';
-    }
-  });
-  
-  // IMPORTANTE: Guardar también todas las condiciones que estén en el estado pero no en activeFilters
-  // (por si hay filtros que se aplicaron pero no están en activeFilters)
-  Object.keys(filterValuesToSave).forEach(key => {
-    if (key.endsWith('_condition')) {
-      // Asegurar que esta condición se guarde
-      if (!filterValuesToSave[key]) {
-        filterValuesToSave[key] = 'contains';
+      const headers = Object.keys(getOriginalData()[0] || {});
+      const headerHash = getHeaderHash(headers);
+      const filters = loadMyFilters();
+      
+      // NUEVO MÉTODO: Construir el objeto de filtros desde cero
+      const filterValuesToSave = {};
+      const activeFilters = getModuleActiveFilters();
+      
+      // Para cada columna con filtro activo
+      Object.keys(activeFilters).forEach(column => {
+        // Guardar el valor del filtro
+        const filterValue = getModuleFilterValues()[column];
+        if (filterValue !== undefined && filterValue !== null && filterValue !== '') {
+          filterValuesToSave[column] = filterValue;
+        }
+        
+        // OBTENER LA CONDICIÓN DIRECTAMENTE DEL DOM
+        const filterItem = document.querySelector(`.filter-item[data-column="${column}"]`);
+        if (filterItem) {
+          const conditionSelect = filterItem.querySelector('.filter-condition-select');
+          if (conditionSelect && conditionSelect.value) {
+            filterValuesToSave[`${column}_condition`] = conditionSelect.value;
+          } else {
+            // Si no hay selector, usar el estado
+            const stateCondition = getModuleFilterValues()[`${column}_condition`];
+            if (stateCondition) {
+              filterValuesToSave[`${column}_condition`] = stateCondition;
+            } else {
+              // Default
+              filterValuesToSave[`${column}_condition`] = 'contains';
+            }
+          }
+        } else {
+          // Si no hay elemento DOM, usar el estado
+          const stateCondition = getModuleFilterValues()[`${column}_condition`];
+          if (stateCondition) {
+            filterValuesToSave[`${column}_condition`] = stateCondition;
+          } else {
+            filterValuesToSave[`${column}_condition`] = 'contains';
+          }
+        }
+      });
+      
+      // Guardar también filtros de fecha si existen
+      Object.keys(getModuleFilterValues()).forEach(key => {
+        if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
+          filterValuesToSave[key] = getModuleFilterValues()[key];
+        }
+      });
+      
+      filters[name] = { filterValues: filterValuesToSave, headerHash, headers, linkedUrgencyCard: urgencyCard };
+      localStorage.setItem('myFilters', JSON.stringify(filters));
+      
+      // Trigger auto-save
+      if (typeof window.triggerAutoSave === 'function') {
+        window.triggerAutoSave();
+      }
+      
+      // Show notification
+      if (typeof window.showUnifiedNotification === 'function') {
+        window.showUnifiedNotification(`Filter "${name}" saved successfully!`, 'success');
       }
     }
-  });
-  
-  filters[name] = { filterValues: filterValuesToSave, headerHash, headers, linkedUrgencyCard: urgencyCard };
-  localStorage.setItem('myFilters', JSON.stringify(filters));
-  
-  // Trigger auto-save
-  if (typeof window.triggerAutoSave === 'function') {
-    window.triggerAutoSave();
-  }
-  
-  // Show notification
-  if (typeof window.showUnifiedNotification === 'function') {
-    window.showUnifiedNotification(`Filter "${name}" saved successfully!`, 'success');
-  }
-}
     function loadMyFilters() {
       try {
         const saved = localStorage.getItem('myFilters');
@@ -2118,28 +2128,18 @@ function generateFilterSidebar(headers) {
         return;
       }
       if (filterObj.headerHash === headerHash) {
-        // Asegurar que todas las condiciones se copien correctamente
-        const filterValuesToApply = { ...filterObj.filterValues };
-        
-        // IMPORTANTE: Verificar que las condiciones estén presentes
-        Object.keys(filterValuesToApply).forEach(key => {
-          if (!key.endsWith('_condition') && !key.endsWith('_start') && !key.endsWith('_end') && !key.endsWith('_empty')) {
-            const conditionKey = `${key}_condition`;
-            if (!filterValuesToApply[conditionKey]) {
-              filterValuesToApply[conditionKey] = 'contains';
-            }
-          }
-        });
-        
-        // IMPORTANTE: Las condiciones _condition deben estar presentes antes de aplicar filtros
-        setModuleFilterValues(filterValuesToApply);
-        
-        // Reconstruct activeFilters from filterValues (excluyendo _condition)
+        // NUEVO MÉTODO: Aplicar filtros desde cero
+        const filterValuesToApply = {};
         const newActiveFilters = {};
-        for (const key of Object.keys(filterObj.filterValues)) {
-          // Excluir claves _condition al reconstruir activeFilters
+        
+        // Copiar TODOS los valores del filtro guardado
+        Object.keys(filterObj.filterValues).forEach(key => {
+          filterValuesToApply[key] = filterObj.filterValues[key];
+          
+          // Reconstruir activeFilters (excluyendo _condition)
           if (key.endsWith('_condition')) {
-            continue;
+            // Solo copiar, no agregar a activeFilters
+            return;
           }
           if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
             const base = key.replace(/_(start|end|empty)$/, '');
@@ -2149,11 +2149,22 @@ function generateFilterSidebar(headers) {
           } else if (filterObj.filterValues[key] !== null && filterObj.filterValues[key] !== undefined && filterObj.filterValues[key] !== '') {
             newActiveFilters[key] = 'text';
           }
-        }
-        setModuleActiveFilters(newActiveFilters);
-        generateFilterSidebar(headers);
+        });
         
-        // Aplicar filtros INMEDIATAMENTE con las condiciones guardadas
+        // Asegurar que todas las columnas con filtros tengan una condición
+        Object.keys(newActiveFilters).forEach(column => {
+          const conditionKey = `${column}_condition`;
+          if (!filterValuesToApply[conditionKey]) {
+            filterValuesToApply[conditionKey] = 'contains';
+          }
+        });
+        
+        // Aplicar los valores al estado
+        setModuleFilterValues(filterValuesToApply);
+        setModuleActiveFilters(newActiveFilters);
+        
+        // Generar sidebar y aplicar filtros
+        generateFilterSidebar(headers);
         applyFilters();
         renderActiveFiltersSummaryChips();
         // Restaurar condiciones en los selectores después de regenerar el sidebar (para visualización)
@@ -2940,40 +2951,50 @@ function loadQuickFilters() {
 }
 function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType = 'ops') {
   const headers = Object.keys(getOriginalData()[0] || {});
-  const filterValues = { ...getModuleFilterValues() };
   const activeFilters = { ...getModuleActiveFilters() };
   
-  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM (prioridad)
-  const filterItems = document.querySelectorAll('.filter-item');
-  filterItems.forEach(item => {
-    const column = item.dataset.column;
-    if (!column) return;
-    
-    // Buscar el selector de condición en este filtro
-    const conditionSelect = item.querySelector('.filter-condition-select');
-    if (conditionSelect && conditionSelect.value) {
-      const conditionKey = `${column}_condition`;
-      filterValues[conditionKey] = conditionSelect.value;
-    }
-  });
+  // NUEVO MÉTODO: Construir el objeto de filtros desde cero
+  const filterValues = {};
   
-  // Asegurar que TODAS las columnas con filtros activos tengan una condición guardada
+  // Para cada columna con filtro activo
   Object.keys(activeFilters).forEach(column => {
-    const conditionKey = `${column}_condition`;
-    // Si no hay condición guardada (ni del DOM ni del estado), usar 'contains' como default
-    if (!filterValues[conditionKey]) {
-      filterValues[conditionKey] = 'contains';
+    // Guardar el valor del filtro
+    const filterValue = getModuleFilterValues()[column];
+    if (filterValue !== undefined && filterValue !== null && filterValue !== '') {
+      filterValues[column] = filterValue;
+    }
+    
+    // OBTENER LA CONDICIÓN DIRECTAMENTE DEL DOM
+    const filterItem = document.querySelector(`.filter-item[data-column="${column}"]`);
+    if (filterItem) {
+      const conditionSelect = filterItem.querySelector('.filter-condition-select');
+      if (conditionSelect && conditionSelect.value) {
+        filterValues[`${column}_condition`] = conditionSelect.value;
+      } else {
+        // Si no hay selector, usar el estado
+        const stateCondition = getModuleFilterValues()[`${column}_condition`];
+        if (stateCondition) {
+          filterValues[`${column}_condition`] = stateCondition;
+        } else {
+          // Default
+          filterValues[`${column}_condition`] = 'contains';
+        }
+      }
+    } else {
+      // Si no hay elemento DOM, usar el estado
+      const stateCondition = getModuleFilterValues()[`${column}_condition`];
+      if (stateCondition) {
+        filterValues[`${column}_condition`] = stateCondition;
+      } else {
+        filterValues[`${column}_condition`] = 'contains';
+      }
     }
   });
   
-  // IMPORTANTE: Guardar también todas las condiciones que estén en el estado pero no en activeFilters
-  // (por si hay filtros que se aplicaron pero no están en activeFilters)
-  Object.keys(filterValues).forEach(key => {
-    if (key.endsWith('_condition')) {
-      // Asegurar que esta condición se guarde
-      if (!filterValues[key]) {
-        filterValues[key] = 'contains';
-      }
+  // Guardar también filtros de fecha si existen
+  Object.keys(getModuleFilterValues()).forEach(key => {
+    if (key.endsWith('_start') || key.endsWith('_end') || key.endsWith('_empty')) {
+      filterValues[key] = getModuleFilterValues()[key];
     }
   });
   
