@@ -1356,6 +1356,72 @@ function generateFilterSidebar(headers) {
           conditionWrapper.appendChild(conditionSelect);
           filterDiv.appendChild(conditionWrapper);
           
+          // Input de texto libre para filtrar por valor escrito
+          const textInputWrapper = document.createElement('div');
+          textInputWrapper.className = 'filter-text-input-wrapper';
+          textInputWrapper.style.marginBottom = '0.5rem';
+          
+          const textInput = document.createElement('input');
+          textInput.type = 'text';
+          textInput.className = 'filter-text-input';
+          textInput.placeholder = `Type a value to filter...`;
+          textInput.autocomplete = 'off';
+          textInput.style.width = '100%';
+          textInput.style.padding = '0.4rem';
+          textInput.style.borderRadius = '4px';
+          textInput.style.border = '1px solid var(--border-color)';
+          textInput.style.backgroundColor = '#1a2332';
+          textInput.style.color = '#ffffff';
+          textInput.style.fontSize = '0.9rem';
+          
+          // Cargar valor guardado si existe
+          const savedTextValue = getModuleFilterValues()[selectedColumn];
+          if (savedTextValue && typeof savedTextValue === 'string' && !Array.isArray(savedTextValue)) {
+            textInput.value = savedTextValue;
+            filterDiv.classList.add('active');
+          }
+          
+          // Aplicar filtro cuando se escribe
+          const handleTextInput = debounce(() => {
+            const textValue = textInput.value.trim();
+            const condition = getModuleFilterValues()[`${selectedColumn}_condition`] || 'contains';
+            
+            if (textValue) {
+              // Si hay un valor escrito, usar ese valor como filtro
+              const currentValues = { ...getModuleFilterValues() };
+              currentValues[selectedColumn] = textValue;
+              currentValues[`${selectedColumn}_condition`] = condition;
+              setModuleFilterValues(currentValues);
+              setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
+              filterDiv.classList.add('active');
+            } else {
+              // Si está vacío, limpiar el filtro
+              const updated = { ...getModuleFilterValues() };
+              // Solo eliminar si no hay valores de checkbox seleccionados
+              if (!Array.isArray(updated[selectedColumn]) || updated[selectedColumn].length === 0) {
+                delete updated[selectedColumn];
+                const activeFilters = { ...getModuleActiveFilters() };
+                delete activeFilters[selectedColumn];
+                setModuleActiveFilters(activeFilters);
+                filterDiv.classList.remove('active');
+              }
+              setModuleFilterValues(updated);
+            }
+            updateActiveFiltersSummary();
+            applyFilters();
+            renderActiveFiltersSummaryChips();
+          }, 300);
+          
+          textInput.addEventListener('input', handleTextInput);
+          textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              handleTextInput();
+            }
+          });
+          
+          textInputWrapper.appendChild(textInput);
+          filterDiv.appendChild(textInputWrapper);
+          
           const dropdownWrapper = document.createElement('div');
           dropdownWrapper.className = 'modal-filter-dropdown-wrapper';
           dropdownWrapper.style.position = 'relative';
