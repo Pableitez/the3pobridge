@@ -2026,7 +2026,7 @@ function generateFilterSidebar(headers) {
   const filters = loadMyFilters();
   const filterValuesToSave = { ...getModuleFilterValues() };
   
-  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM
+  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM (prioridad)
   const filterItems = document.querySelectorAll('.filter-item');
   filterItems.forEach(item => {
     const column = item.dataset.column;
@@ -2040,15 +2040,24 @@ function generateFilterSidebar(headers) {
     }
   });
   
-  // Asegurar que todas las condiciones se guarden
-  // IMPORTANTE: Verificar que las condiciones estén presentes para todas las columnas con filtros activos
+  // Asegurar que TODAS las columnas con filtros activos tengan una condición guardada
   const activeFilters = getModuleActiveFilters();
   Object.keys(activeFilters).forEach(column => {
-    // Si hay un filtro activo para esta columna, asegurar que tenga una condición
     const conditionKey = `${column}_condition`;
+    // Si no hay condición guardada (ni del DOM ni del estado), usar 'contains' como default
     if (!filterValuesToSave[conditionKey]) {
-      // Si no hay condición guardada, usar 'contains' como default
       filterValuesToSave[conditionKey] = 'contains';
+    }
+  });
+  
+  // IMPORTANTE: Guardar también todas las condiciones que estén en el estado pero no en activeFilters
+  // (por si hay filtros que se aplicaron pero no están en activeFilters)
+  Object.keys(filterValuesToSave).forEach(key => {
+    if (key.endsWith('_condition')) {
+      // Asegurar que esta condición se guarde
+      if (!filterValuesToSave[key]) {
+        filterValuesToSave[key] = 'contains';
+      }
     }
   });
   
@@ -2909,7 +2918,7 @@ function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType =
   const filterValues = { ...getModuleFilterValues() };
   const activeFilters = { ...getModuleActiveFilters() };
   
-  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM
+  // FORZAR: Obtener las condiciones directamente de los selectores en el DOM (prioridad)
   const filterItems = document.querySelectorAll('.filter-item');
   filterItems.forEach(item => {
     const column = item.dataset.column;
@@ -2923,16 +2932,26 @@ function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType =
     }
   });
   
-  // Asegurar que todas las condiciones se guarden
-  // IMPORTANTE: Verificar que las condiciones estén presentes para todas las columnas con filtros activos
+  // Asegurar que TODAS las columnas con filtros activos tengan una condición guardada
   Object.keys(activeFilters).forEach(column => {
-    // Si hay un filtro activo para esta columna, asegurar que tenga una condición
     const conditionKey = `${column}_condition`;
+    // Si no hay condición guardada (ni del DOM ni del estado), usar 'contains' como default
     if (!filterValues[conditionKey]) {
-      // Si no hay condición guardada, usar 'contains' como default
       filterValues[conditionKey] = 'contains';
     }
   });
+  
+  // IMPORTANTE: Guardar también todas las condiciones que estén en el estado pero no en activeFilters
+  // (por si hay filtros que se aplicaron pero no están en activeFilters)
+  Object.keys(filterValues).forEach(key => {
+    if (key.endsWith('_condition')) {
+      // Asegurar que esta condición se guarde
+      if (!filterValues[key]) {
+        filterValues[key] = 'contains';
+      }
+    }
+  });
+  
   const quickFilters = loadQuickFilters();
   const filterObj = { filterValues, activeFilters, headers, hubType };
   if (urgencyCard && urgencyCard !== 'Ninguna') filterObj.linkedUrgencyCard = urgencyCard;
