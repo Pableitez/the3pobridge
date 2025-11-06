@@ -3230,6 +3230,11 @@ function getDashboardQuickFilterPreviewCount(name) {
   const filterValues = filterObj.filterValues;
   
   Object.entries(filterValues).forEach(([key, value]) => {
+    // Copiar también las condiciones (_condition)
+    if (key.endsWith('_condition')) {
+      combinedFilterValues[key] = value;
+      return;
+    }
     // Usar el tipo de filtro guardado si está disponible
     const savedActiveFilters = filterObj.activeFilters || {};
     if (savedActiveFilters[key]) {
