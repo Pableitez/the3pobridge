@@ -130,7 +130,9 @@ export function getModuleFilterValues() {
 }
 
 export function setModuleFilterValues(values) {
-    moduleFilterValues = values;
+    // Asegurar que se copie el objeto correctamente
+    moduleFilterValues = { ...values };
+    console.log('💾 setModuleFilterValues called with:', moduleFilterValues);
 }
 
 export function getModuleActiveFilters() {
