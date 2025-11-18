@@ -540,6 +540,13 @@ html body #filterModal .modal-header[style] {
   color: #718096;
 }
 
+.filter-tag-exclude,
+.filter-tag.filter-tag-exclude {
+  background: #ff6b6b !important;
+  border-color: #ff4757 !important;
+  color: #ffffff !important;
+}
+
 /* Filter Suggestions */
 .reference-filter {
   position: relative;
@@ -2354,6 +2361,13 @@ html body #filterModal .modal-header[style] {
 
 /* ===== CHIPS DE FILTROS ESPECÍFICAS DEL MODAL ===== */
 /* Estas tienen fondo blanco como solicitado */
+
+.modal-filter-tag-exclude,
+.modal-filter-tag.modal-filter-tag-exclude {
+  background: #ff6b6b !important;
+  border-color: #ff4757 !important;
+  color: #ffffff !important;
+}
 
 .modal-filter-tag {
   display: inline-flex;

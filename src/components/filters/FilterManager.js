@@ -548,11 +548,42 @@ function generateFilterSidebar(headers) {
         }
       });
       // Chips de otros filtros
+      const filterExclude = getModuleFilterExclude();
       Object.entries(filterValues).forEach(([key, value]) => {
         if (!key.endsWith('_start') && !key.endsWith('_end') && !key.endsWith('_empty') && Array.isArray(value) && value.length > 0) {
           const tag = document.createElement('div');
           tag.className = 'modal-filter-tag';
-          tag.innerHTML = `<span>${key}: ${value.join(', ')}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
+          
+          // Si está en modo exclusión, agregar estilo rojo
+          const isExcludeMode = filterExclude[key] || false;
+          
+          // Formatear valores para display (remover __EMPTY__ y __NO_EMPTY__)
+          const displayValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+          const hasEmpty = value.includes('__EMPTY__');
+          const hasNoEmpty = value.includes('__NO_EMPTY__');
+          
+          let displayText = '';
+          if (isExcludeMode) {
+            displayText = '<strong style="font-weight: 600;">Exclude</strong> ';
+          }
+          
+          displayText += `${key}: `;
+          
+          // Construir la lista de valores
+          const valueParts = [];
+          if (hasEmpty) valueParts.push('(Empty)');
+          if (hasNoEmpty) valueParts.push('(No Empty)');
+          if (displayValues.length > 0) {
+            if (displayValues.length <= 3) {
+              valueParts.push(...displayValues);
+            } else {
+              valueParts.push(`${displayValues.length} values`);
+            }
+          }
+          
+          displayText += valueParts.join(', ');
+          
+          tag.innerHTML = `<span>${displayText}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
           list.appendChild(tag);
         }
       });
@@ -1883,12 +1914,43 @@ function generateFilterSidebar(headers) {
         }
       });
       // Add other filters
+      const filterExclude = getModuleFilterExclude();
       Object.entries(otherFilters).forEach(([column, values]) => {
         if (Array.isArray(values) && values.length > 0) {
           const tag = document.createElement('div');
           tag.className = 'modal-filter-tag';
+          
+          // Si está en modo exclusión, agregar estilo rojo
+          const isExcludeMode = filterExclude[column] || false;
+          
+          // Formatear valores para display (remover __EMPTY__ y __NO_EMPTY__)
+          const displayValues = values.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+          const hasEmpty = values.includes('__EMPTY__');
+          const hasNoEmpty = values.includes('__NO_EMPTY__');
+          
+          let displayText = '';
+          if (isExcludeMode) {
+            displayText = '<strong style="font-weight: 600;">Exclude</strong> ';
+          }
+          
+          displayText += `${column}: `;
+          
+          // Construir la lista de valores
+          const valueParts = [];
+          if (hasEmpty) valueParts.push('(Empty)');
+          if (hasNoEmpty) valueParts.push('(No Empty)');
+          if (displayValues.length > 0) {
+            if (displayValues.length <= 3) {
+              valueParts.push(...displayValues);
+            } else {
+              valueParts.push(`${displayValues.length} values`);
+            }
+          }
+          
+          displayText += valueParts.join(', ');
+          
           tag.innerHTML = `
-            <span>${column}: ${values.join(', ')}</span>
+            <span>${displayText}</span>
             <button class="modal-filter-tag-remove" data-column="${column}">×</button>
           `;
           list.appendChild(tag);
@@ -2650,13 +2712,44 @@ export function renderActiveFiltersSummaryChips() {
     }
   });
   // Other filters
+  const filterExclude = getModuleFilterExclude();
   Object.entries(otherFilters).forEach(([column, values]) => {
     if (Array.isArray(values) && values.length > 0) {
       count++;
       const tag = document.createElement('div');
       tag.className = 'filter-tag';
+      
+      // Si está en modo exclusión, agregar clase y estilo rojo
+      const isExcludeMode = filterExclude[column] || false;
+      
+      // Formatear valores para display (remover __EMPTY__ y __NO_EMPTY__)
+      const displayValues = values.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+      const hasEmpty = values.includes('__EMPTY__');
+      const hasNoEmpty = values.includes('__NO_EMPTY__');
+      
+      let displayText = '';
+      if (isExcludeMode) {
+        displayText = '<strong style="font-weight: 600;">Exclude</strong> ';
+      }
+      
+      displayText += `${column}: `;
+      
+      // Construir la lista de valores
+      const valueParts = [];
+      if (hasEmpty) valueParts.push('(Empty)');
+      if (hasNoEmpty) valueParts.push('(No Empty)');
+      if (displayValues.length > 0) {
+        if (displayValues.length <= 3) {
+          valueParts.push(...displayValues);
+        } else {
+          valueParts.push(`${displayValues.length} values`);
+        }
+      }
+      
+      displayText += valueParts.join(', ');
+      
       tag.innerHTML = `
-        <span>${column}: ${values.join(', ')}</span>
+        <span>${displayText}</span>
         <button class="filter-tag-remove" data-column="${column}">×</button>
       `;
       summary.appendChild(tag);
@@ -2819,6 +2912,7 @@ function getFilteredData() {
   const data = getOriginalData();
   const activeFilters = getModuleActiveFilters();
   const filterValues = getModuleFilterValues();
+  const filterExclude = getModuleFilterExclude();
   if (!data || !data.length) return [];
   let filteredData = [...data];
 
@@ -2876,31 +2970,34 @@ function getFilteredData() {
         const hasNoEmpty = value.includes('__NO_EMPTY__');
         const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
         
+        // Verificar si está en modo exclusión
+        const isExcludeMode = filterExclude[column] || false;
+        
+        let shouldInclude = false;
+        
         // Si hay otros valores específicos seleccionados
         if (otherValues.length > 0) {
           const matchesValue = value.includes(cellValue?.toString());
-          // Si coincide con un valor específico, incluirlo
-          if (matchesValue) return true;
-          // Si no coincide pero está vacío y __EMPTY__ está seleccionado, incluirlo
-          if (isEmpty && hasEmpty) return true;
-          // Si no coincide pero no está vacío y __NO_EMPTY__ está seleccionado, incluirlo
-          if (!isEmpty && hasNoEmpty) return true;
-          return false;
+          if (matchesValue) shouldInclude = true;
+          if (isEmpty && hasEmpty) shouldInclude = true;
+          if (!isEmpty && hasNoEmpty) shouldInclude = true;
+        } else {
+          // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+          if (hasEmpty && hasNoEmpty) {
+            shouldInclude = true; // Ambos: mostrar todos
+          } else if (hasEmpty) {
+            shouldInclude = isEmpty; // Solo __EMPTY__: mostrar solo vacíos
+          } else if (hasNoEmpty) {
+            shouldInclude = !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+          }
         }
         
-        // Si solo hay __EMPTY__ y/o __NO_EMPTY__
-        if (hasEmpty && hasNoEmpty) {
-          // Ambos seleccionados: mostrar todos
-          return true;
-        } else if (hasEmpty) {
-          // Solo __EMPTY__: mostrar solo vacíos
-          return isEmpty;
-        } else if (hasNoEmpty) {
-          // Solo __NO_EMPTY__: mostrar solo no vacíos
-          return !isEmpty;
+        // Si está en modo exclusión, invertir la lógica
+        if (isExcludeMode) {
+          return !shouldInclude;
         }
         
-        return false;
+        return shouldInclude;
       }
       switch (filterType) {
         case 'text':

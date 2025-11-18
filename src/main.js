@@ -174,6 +174,7 @@ import {
   getTableActiveFilters,
   getTableFilterValues,
   getModuleActiveFilters,
+  getModuleFilterExclude,
   setModuleFilterExclude // <-- Añadido para modo exclusión
 } from './store/index.js';
 import { validateCSVFile, parseCSVFile } from './services/csvService.js';
@@ -3226,10 +3227,12 @@ function getDashboardQuickFilterPreviewCount(name) {
   // Guardar el estado actual de filtros
   const currentActiveFilters = { ...getModuleActiveFilters() };
   const currentFilterValues = { ...getModuleFilterValues() };
+  const currentFilterExclude = { ...getModuleFilterExclude() };
   
   // Combinar filtros activos actuales + el quick filter
   const combinedActiveFilters = { ...currentActiveFilters };
   const combinedFilterValues = { ...currentFilterValues };
+  const combinedFilterExclude = { ...currentFilterExclude };
   
   // Añadir los filtros del quick filter
   const filterValues = filterObj.filterValues;
@@ -3280,9 +3283,17 @@ function getDashboardQuickFilterPreviewCount(name) {
     }
   });
   
+  // Combinar estados de exclusión del quick filter
+  if (filterObj.filterExclude) {
+    Object.assign(combinedFilterExclude, filterObj.filterExclude);
+  }
+  
   // Aplicar la combinación de filtros
   setModuleActiveFilters(combinedActiveFilters);
   setModuleFilterValues(combinedFilterValues);
+  if (typeof setModuleFilterExclude === 'function') {
+    setModuleFilterExclude(combinedFilterExclude);
+  }
   
   // Obtener el número de filas filtradas usando la función estándar
   const filteredData = getFilteredData();
@@ -3291,6 +3302,9 @@ function getDashboardQuickFilterPreviewCount(name) {
   // Restaurar el estado original de filtros
   setModuleActiveFilters(currentActiveFilters);
   setModuleFilterValues(currentFilterValues);
+  if (typeof setModuleFilterExclude === 'function') {
+    setModuleFilterExclude(currentFilterExclude);
+  }
   
   return count;
 }
@@ -6293,6 +6307,7 @@ function renderOpsHubFilterChips() {
     
     let combinedFilterValues = {};
     let combinedActiveFilters = {};
+    let combinedFilterExclude = {};
     previewCards.forEach(key => {
       const entry = Object.entries(quickFiltersObj).find(([name, obj]) => obj.linkedUrgencyCard === key);
       console.log('DEBUG - Found filter entry for card', key, ':', entry);
@@ -6300,6 +6315,11 @@ function renderOpsHubFilterChips() {
       if (entry) {
         const [, filterObj] = entry;
         console.log('DEBUG - Filter object:', filterObj);
+        
+        // Combinar estados de exclusión
+        if (filterObj.filterExclude) {
+          Object.assign(combinedFilterExclude, filterObj.filterExclude);
+        }
         
         for (const k in filterObj.filterValues) {
           const value = filterObj.filterValues[k];
@@ -6378,11 +6398,39 @@ function renderOpsHubFilterChips() {
           }
         }
         if (Array.isArray(value)) {
-          // Si incluye __EMPTY__, cuenta también vacíos/null/undefined
-          if (value.includes('__EMPTY__')) {
-            return value.includes(row[key]) || row[key] === '' || row[key] === null || row[key] === undefined;
+          const isEmpty = (row[key] === '' || row[key] === null || row[key] === undefined);
+          const hasEmpty = value.includes('__EMPTY__');
+          const hasNoEmpty = value.includes('__NO_EMPTY__');
+          const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+          
+          // Verificar si está en modo exclusión
+          const isExcludeMode = combinedFilterExclude[key] || false;
+          
+          let shouldInclude = false;
+          
+          // Si hay otros valores específicos seleccionados
+          if (otherValues.length > 0) {
+            const matchesValue = value.includes(row[key]?.toString());
+            if (matchesValue) shouldInclude = true;
+            if (isEmpty && hasEmpty) shouldInclude = true;
+            if (!isEmpty && hasNoEmpty) shouldInclude = true;
+          } else {
+            // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+            if (hasEmpty && hasNoEmpty) {
+              shouldInclude = true; // Ambos: mostrar todos
+            } else if (hasEmpty) {
+              shouldInclude = isEmpty; // Solo __EMPTY__: mostrar solo vacíos
+            } else if (hasNoEmpty) {
+              shouldInclude = !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+            }
           }
-          return value.includes(row[key]);
+          
+          // Si está en modo exclusión, invertir la lógica
+          if (isExcludeMode) {
+            return !shouldInclude;
+          }
+          
+          return shouldInclude;
         }
         // Si el valor es __EMPTY__, cuenta vacíos/null/undefined
         if (value === '__EMPTY__') {
