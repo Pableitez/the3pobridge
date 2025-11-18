@@ -1190,18 +1190,10 @@ function showExcelFilterDropdown(th, column) {
     
     const excludeLabel = document.createElement('label');
     excludeLabel.htmlFor = `exclude-toggle-table-${column}`;
-    excludeLabel.innerHTML = '<strong>Exclude mode:</strong> Show all values EXCEPT the selected ones';
+    excludeLabel.textContent = 'Exclude selected values';
     excludeLabel.style.cursor = 'pointer';
     excludeLabel.style.fontSize = '0.85rem';
     excludeLabel.style.userSelect = 'none';
-    excludeLabel.style.lineHeight = '1.4';
-    
-    // Estilizar el texto "Exclude mode:"
-    const strongTag = excludeLabel.querySelector('strong');
-    if (strongTag) {
-        strongTag.style.color = '#47B2E5';
-        strongTag.style.fontWeight = '600';
-    }
     
     // Cargar estado de exclusión guardado
     const excludeState = getTableFilterExclude();
