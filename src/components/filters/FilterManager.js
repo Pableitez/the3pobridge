@@ -1630,19 +1630,11 @@ function generateFilterSidebar(headers) {
             
             const excludeLabel = document.createElement('label');
             excludeLabel.htmlFor = `exclude-toggle-${selectedColumn}`;
-            excludeLabel.innerHTML = '<strong>Exclude mode:</strong> Show all values EXCEPT the selected ones';
+            excludeLabel.textContent = 'Exclude selected values';
             excludeLabel.style.color = '#E8F4F8';
             excludeLabel.style.cursor = 'pointer';
             excludeLabel.style.fontSize = '0.9rem';
             excludeLabel.style.userSelect = 'none';
-            excludeLabel.style.lineHeight = '1.4';
-            
-            // Estilizar el texto "Exclude mode:"
-            const strongTag = excludeLabel.querySelector('strong');
-            if (strongTag) {
-                strongTag.style.color = '#47B2E5';
-                strongTag.style.fontWeight = '600';
-            }
             
             // Cargar estado de exclusión guardado
             const excludeState = getModuleFilterExclude();
