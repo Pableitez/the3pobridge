@@ -1121,6 +1121,55 @@ function showExcelFilterDropdown(th, column) {
     searchInput.style.border = '1px solid var(--border-color)';
     searchInput.style.borderRadius = '4px';
     dropdown.appendChild(searchInput);
+    
+    // Campo para agregar valores personalizados
+    const customValueContainer = document.createElement('div');
+    customValueContainer.style.display = 'flex';
+    customValueContainer.style.gap = '0.5rem';
+    customValueContainer.style.marginBottom = '0.5rem';
+    customValueContainer.style.alignItems = 'center';
+    
+    const customInput = document.createElement('input');
+    customInput.type = 'text';
+    customInput.className = 'excel-filter-custom-input';
+    customInput.placeholder = 'Add custom value...';
+    customInput.autocomplete = 'off';
+    customInput.style.flex = '1';
+    customInput.style.padding = '0.3rem';
+    customInput.style.border = '1px solid var(--border-color)';
+    customInput.style.borderRadius = '4px';
+    
+    const addCustomBtn = document.createElement('button');
+    addCustomBtn.type = 'button';
+    addCustomBtn.textContent = 'Add';
+    addCustomBtn.className = 'excel-filter-add-custom-btn';
+    addCustomBtn.style.padding = '0.3rem 0.8rem';
+    addCustomBtn.style.background = '#47B2E5';
+    addCustomBtn.style.border = 'none';
+    addCustomBtn.style.borderRadius = '4px';
+    addCustomBtn.style.color = '#fff';
+    addCustomBtn.style.cursor = 'pointer';
+    addCustomBtn.style.fontSize = '0.85rem';
+    addCustomBtn.style.fontWeight = '500';
+    
+    addCustomBtn.addEventListener('click', () => {
+        const customValue = customInput.value.trim();
+        if (customValue && customValue !== '') {
+            selectedSet.add(customValue);
+            customInput.value = '';
+            renderCheckboxList();
+        }
+    });
+    
+    customInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            addCustomBtn.click();
+        }
+    });
+    
+    customValueContainer.appendChild(customInput);
+    customValueContainer.appendChild(addCustomBtn);
+    dropdown.appendChild(customValueContainer);
 
     // Options container
     const optionsDiv = document.createElement('div');
@@ -1437,6 +1486,18 @@ function showExcelFilterDropdown(th, column) {
         noEmptyLabel.appendChild(noEmptyCheckbox);
         noEmptyLabel.appendChild(document.createTextNode('(No Empty)'));
         optionsDiv.appendChild(noEmptyLabel);
+        // Agregar valores personalizados que no están en uniqueValues pero están seleccionados
+        const selectedValues = Array.from(selectedSet).filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+        selectedValues.forEach(customVal => {
+            if (!uniqueValues.includes(customVal) && !filteredValues.includes(customVal)) {
+                // Si el término de búsqueda coincide o está vacío, agregar el valor personalizado
+                const searchTerm = searchInput.value.trim().toLowerCase();
+                if (!searchTerm || customVal.toLowerCase().includes(searchTerm)) {
+                    filteredValues.push(customVal);
+                }
+            }
+        });
+        
         // Resto de valores - VERIFICAR DUPLICADOS EN TIEMPO REAL
         const processedValues = new Set();
         filteredValues.forEach(val => {

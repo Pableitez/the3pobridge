@@ -1309,6 +1309,76 @@ function generateFilterSidebar(headers) {
             if (input.value) input.value = '';
           });
           dropdownWrapper.appendChild(input);
+          
+          // Campo para agregar valores personalizados
+          const customValueContainer = document.createElement('div');
+          customValueContainer.style.display = 'flex';
+          customValueContainer.style.gap = '0.5rem';
+          customValueContainer.style.marginTop = '0.5rem';
+          customValueContainer.style.alignItems = 'center';
+          
+          const customInput = document.createElement('input');
+          customInput.type = 'text';
+          customInput.className = 'modal-filter-custom-input';
+          customInput.placeholder = 'Add custom value...';
+          customInput.autocomplete = 'off';
+          customInput.style.flex = '1';
+          customInput.style.padding = '0.5rem';
+          customInput.style.border = '1px solid rgba(71, 178, 229, 0.3)';
+          customInput.style.borderRadius = '6px';
+          customInput.style.background = 'rgba(255, 255, 255, 0.05)';
+          customInput.style.color = '#E8F4F8';
+          customInput.style.fontSize = '0.9rem';
+          
+          const addCustomBtn = document.createElement('button');
+          addCustomBtn.type = 'button';
+          addCustomBtn.textContent = 'Add';
+          addCustomBtn.className = 'modal-filter-add-custom-btn';
+          addCustomBtn.style.padding = '0.5rem 1rem';
+          addCustomBtn.style.background = 'rgba(71, 178, 229, 0.2)';
+          addCustomBtn.style.border = '1px solid rgba(71, 178, 229, 0.4)';
+          addCustomBtn.style.borderRadius = '6px';
+          addCustomBtn.style.color = '#47B2E5';
+          addCustomBtn.style.cursor = 'pointer';
+          addCustomBtn.style.fontSize = '0.9rem';
+          addCustomBtn.style.fontWeight = '500';
+          addCustomBtn.style.transition = 'all 0.3s ease';
+          
+          addCustomBtn.addEventListener('mouseenter', () => {
+            addCustomBtn.style.background = 'rgba(71, 178, 229, 0.3)';
+            addCustomBtn.style.borderColor = 'rgba(71, 178, 229, 0.6)';
+          });
+          
+          addCustomBtn.addEventListener('mouseleave', () => {
+            addCustomBtn.style.background = 'rgba(71, 178, 229, 0.2)';
+            addCustomBtn.style.borderColor = 'rgba(71, 178, 229, 0.4)';
+          });
+          
+          addCustomBtn.addEventListener('click', () => {
+            const customValue = customInput.value.trim();
+            if (customValue && customValue !== '') {
+              selectedSet = new Set(getModuleFilterValues()[selectedColumn] || []);
+              selectedSet.add(customValue);
+              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+              setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
+              filterDiv.classList.add('active');
+              customInput.value = '';
+              renderCheckboxList(lastFilterTerm);
+              updateActiveFiltersSummary();
+              applyFilters();
+              updateInputSummary();
+            }
+          });
+          
+          customInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              addCustomBtn.click();
+            }
+          });
+          
+          customValueContainer.appendChild(customInput);
+          customValueContainer.appendChild(addCustomBtn);
+          dropdownWrapper.appendChild(customValueContainer);
           const dropdown = document.createElement('div');
           dropdown.className = 'modal-filter-dropdown hidden';
           dropdown.style.position = 'absolute';
@@ -1514,6 +1584,17 @@ function generateFilterSidebar(headers) {
               const lowerTerm = filterTerm.toLowerCase();
               filteredValues = uniqueValues.filter(val => val.toLowerCase().includes(lowerTerm));
             }
+            // Agregar valores personalizados que no están en uniqueValues pero están seleccionados
+            const selectedValues = Array.from(selectedSet).filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+            selectedValues.forEach(customVal => {
+              if (!uniqueValues.includes(customVal) && !filteredValues.includes(customVal)) {
+                // Si el término de búsqueda coincide o está vacío, agregar el valor personalizado
+                if (!filterTerm || customVal.toLowerCase().includes(filterTerm.toLowerCase())) {
+                  filteredValues.push(customVal);
+                }
+              }
+            });
+            
             // VERIFICAR QUE NO HAYA DUPLICADOS EN TIEMPO REAL
             const processedValues = new Set();
             filteredValues.slice(0, MAX_OPTIONS).forEach(val => {
