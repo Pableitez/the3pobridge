@@ -284,9 +284,29 @@ class AnalyticsDashboard {
           if (cellValue === null || cellValue === undefined) return false;
           
           if (Array.isArray(value)) {
-            if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
-              return true;
+            const isEmpty = (cellValue === '' || cellValue === null || cellValue === undefined);
+            const hasEmpty = value.includes('__EMPTY__');
+            const hasNoEmpty = value.includes('__NO_EMPTY__');
+            const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+            
+            // Si hay otros valores específicos seleccionados
+            if (otherValues.length > 0) {
+              const matchesValue = value.includes(cellValue?.toString());
+              if (matchesValue) return true;
+              if (isEmpty && hasEmpty) return true;
+              if (!isEmpty && hasNoEmpty) return true;
+              return false;
             }
+            
+            // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+            if (hasEmpty && hasNoEmpty) {
+              return true; // Ambos: mostrar todos
+            } else if (hasEmpty) {
+              return isEmpty; // Solo __EMPTY__: mostrar solo vacíos
+            } else if (hasNoEmpty) {
+              return !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+            }
+            
             return value.includes(cellValue?.toString());
           }
           

@@ -500,13 +500,36 @@ class DqHubManager {
                         }
                     }
                     if (Array.isArray(value)) {
-                        if (value.includes('__EMPTY__')) {
-                            return value.includes(row[key]) || row[key] === '' || row[key] === null || row[key] === undefined;
+                        const isEmpty = (row[key] === '' || row[key] === null || row[key] === undefined);
+                        const hasEmpty = value.includes('__EMPTY__');
+                        const hasNoEmpty = value.includes('__NO_EMPTY__');
+                        const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+                        
+                        // Si hay otros valores específicos seleccionados
+                        if (otherValues.length > 0) {
+                            const matchesValue = value.includes(row[key]);
+                            if (matchesValue) return true;
+                            if (isEmpty && hasEmpty) return true;
+                            if (!isEmpty && hasNoEmpty) return true;
+                            return false;
                         }
+                        
+                        // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+                        if (hasEmpty && hasNoEmpty) {
+                            return true; // Ambos: mostrar todos
+                        } else if (hasEmpty) {
+                            return isEmpty; // Solo __EMPTY__: mostrar solo vacíos
+                        } else if (hasNoEmpty) {
+                            return !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+                        }
+                        
                         return value.includes(row[key]);
                     }
                     if (value === '__EMPTY__') {
                         return row[key] === '' || row[key] === null || row[key] === undefined;
+                    }
+                    if (value === '__NO_EMPTY__') {
+                        return row[key] !== '' && row[key] !== null && row[key] !== undefined;
                     }
                     return row[key] === value;
                 });
@@ -1493,13 +1516,36 @@ class DqHubManager {
                         }
                     }
                     if (Array.isArray(value)) {
-                        if (value.includes('__EMPTY__')) {
-                            return value.includes(row[key]) || row[key] === '' || row[key] === null || row[key] === undefined;
+                        const isEmpty = (row[key] === '' || row[key] === null || row[key] === undefined);
+                        const hasEmpty = value.includes('__EMPTY__');
+                        const hasNoEmpty = value.includes('__NO_EMPTY__');
+                        const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+                        
+                        // Si hay otros valores específicos seleccionados
+                        if (otherValues.length > 0) {
+                            const matchesValue = value.includes(row[key]);
+                            if (matchesValue) return true;
+                            if (isEmpty && hasEmpty) return true;
+                            if (!isEmpty && hasNoEmpty) return true;
+                            return false;
                         }
+                        
+                        // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+                        if (hasEmpty && hasNoEmpty) {
+                            return true; // Ambos: mostrar todos
+                        } else if (hasEmpty) {
+                            return isEmpty; // Solo __EMPTY__: mostrar solo vacíos
+                        } else if (hasNoEmpty) {
+                            return !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+                        }
+                        
                         return value.includes(row[key]);
                     }
                     if (value === '__EMPTY__') {
                         return row[key] === '' || row[key] === null || row[key] === undefined;
+                    }
+                    if (value === '__NO_EMPTY__') {
+                        return row[key] !== '' && row[key] !== null && row[key] !== undefined;
                     }
                     return row[key] === value;
                 });

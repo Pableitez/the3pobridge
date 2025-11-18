@@ -1416,6 +1416,27 @@ function showExcelFilterDropdown(th, column) {
         emptyLabel.appendChild(emptyCheckbox);
         emptyLabel.appendChild(document.createTextNode('(Empty)'));
         optionsDiv.appendChild(emptyLabel);
+        // Opción (No Empty)
+        const noEmptyLabel = document.createElement('label');
+        noEmptyLabel.style.display = 'flex';
+        noEmptyLabel.style.alignItems = 'center';
+        noEmptyLabel.style.gap = '0.5rem';
+        noEmptyLabel.style.padding = '0.15rem 0.5rem';
+        const noEmptyCheckbox = document.createElement('input');
+        noEmptyCheckbox.type = 'checkbox';
+        noEmptyCheckbox.value = '__NO_EMPTY__';
+        noEmptyCheckbox.checked = selectedSet.has('__NO_EMPTY__');
+        noEmptyCheckbox.addEventListener('change', () => {
+            if (noEmptyCheckbox.checked) {
+                selectedSet.add('__NO_EMPTY__');
+            } else {
+                selectedSet.delete('__NO_EMPTY__');
+            }
+            renderCheckboxList();
+        });
+        noEmptyLabel.appendChild(noEmptyCheckbox);
+        noEmptyLabel.appendChild(document.createTextNode('(No Empty)'));
+        optionsDiv.appendChild(noEmptyLabel);
         // Resto de valores - VERIFICAR DUPLICADOS EN TIEMPO REAL
         const processedValues = new Set();
         filteredValues.forEach(val => {

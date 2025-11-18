@@ -1483,6 +1483,31 @@ function generateFilterSidebar(headers) {
               updateInputSummary();
             });
             list.appendChild(emptyBtn2);
+            // Botón (No Empty)
+            const noEmptyBtn2 = document.createElement('button');
+            noEmptyBtn2.type = 'button';
+            noEmptyBtn2.className = 'empty-toggle-btn';
+            noEmptyBtn2.textContent = '(No Empty)';
+            noEmptyBtn2.style.color = '#47B2E5';
+            noEmptyBtn2.style.background = 'rgba(71, 178, 229, 0.2)';
+            noEmptyBtn2.style.border = '1px solid rgba(71, 178, 229, 0.3)';
+            noEmptyBtn2.style.marginLeft = '0.5rem';
+            if (selectedSet.has('__NO_EMPTY__')) noEmptyBtn2.classList.add('active');
+            noEmptyBtn2.addEventListener('click', () => {
+              if (selectedSet.has('__NO_EMPTY__')) {
+                selectedSet.delete('__NO_EMPTY__');
+                noEmptyBtn2.classList.remove('active');
+              } else {
+                selectedSet.add('__NO_EMPTY__');
+                noEmptyBtn2.classList.add('active');
+              }
+              setModuleFilterValues({ ...getModuleFilterValues(), [selectedColumn]: Array.from(selectedSet) });
+              setModuleActiveFilters({ ...getModuleActiveFilters(), [selectedColumn]: type });
+              filterDiv.classList.toggle('active', selectedSet.size > 0);
+              updateActiveFiltersSummary();
+              updateInputSummary();
+            });
+            list.appendChild(noEmptyBtn2);
             const MAX_OPTIONS = 200;
             filteredValues = uniqueValues;
             if (filterTerm) {
@@ -1585,9 +1610,13 @@ function generateFilterSidebar(headers) {
             updateInputSummary();
           });
           function updateInputSummary() {
-            const selected = Array.from(selectedSet).filter(v => v !== '__EMPTY__');
-            if (selectedSet.has('__EMPTY__')) {
+            const selected = Array.from(selectedSet).filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+            if (selectedSet.has('__EMPTY__') && selectedSet.has('__NO_EMPTY__')) {
+              input.value = '(Empty), (No Empty)';
+            } else if (selectedSet.has('__EMPTY__')) {
               input.value = '(Empty)';
+            } else if (selectedSet.has('__NO_EMPTY__')) {
+              input.value = '(No Empty)';
             } else if (selected.length === 0) {
               input.value = '';
             } else if (selected.length <= 2) {
@@ -2171,10 +2200,36 @@ function applyFilters() {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) return false;
                 if (Array.isArray(value)) {
-                    if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
-                        return true;
+                    const isEmpty = (cellValue === '' || cellValue === null || cellValue === undefined);
+                    const hasEmpty = value.includes('__EMPTY__');
+                    const hasNoEmpty = value.includes('__NO_EMPTY__');
+                    const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+                    
+                    // Si hay otros valores específicos seleccionados
+                    if (otherValues.length > 0) {
+                        const matchesValue = value.includes(cellValue?.toString());
+                        // Si coincide con un valor específico, incluirlo
+                        if (matchesValue) return true;
+                        // Si no coincide pero está vacío y __EMPTY__ está seleccionado, incluirlo
+                        if (isEmpty && hasEmpty) return true;
+                        // Si no coincide pero no está vacío y __NO_EMPTY__ está seleccionado, incluirlo
+                        if (!isEmpty && hasNoEmpty) return true;
+                        return false;
                     }
-                    return value.includes(cellValue?.toString());
+                    
+                    // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+                    if (hasEmpty && hasNoEmpty) {
+                        // Ambos seleccionados: mostrar todos
+                        return true;
+                    } else if (hasEmpty) {
+                        // Solo __EMPTY__: mostrar solo vacíos
+                        return isEmpty;
+                    } else if (hasNoEmpty) {
+                        // Solo __NO_EMPTY__: mostrar solo no vacíos
+                        return !isEmpty;
+                    }
+                    
+                    return false;
                 }
                 switch (filterType) {
                     case 'text':
@@ -2201,10 +2256,36 @@ function applyFilters() {
             const cellValue = row[column];
             if (cellValue === null || cellValue === undefined) return false;
             if (Array.isArray(value)) {
-                if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
-                    return true;
+                const isEmpty = (cellValue === '' || cellValue === null || cellValue === undefined);
+                const hasEmpty = value.includes('__EMPTY__');
+                const hasNoEmpty = value.includes('__NO_EMPTY__');
+                const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+                
+                // Si hay otros valores específicos seleccionados
+                if (otherValues.length > 0) {
+                    const matchesValue = value.includes(cellValue?.toString());
+                    // Si coincide con un valor específico, incluirlo
+                    if (matchesValue) return true;
+                    // Si no coincide pero está vacío y __EMPTY__ está seleccionado, incluirlo
+                    if (isEmpty && hasEmpty) return true;
+                    // Si no coincide pero no está vacío y __NO_EMPTY__ está seleccionado, incluirlo
+                    if (!isEmpty && hasNoEmpty) return true;
+                    return false;
                 }
-                return value.includes(cellValue?.toString());
+                
+                // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+                if (hasEmpty && hasNoEmpty) {
+                    // Ambos seleccionados: mostrar todos
+                    return true;
+                } else if (hasEmpty) {
+                    // Solo __EMPTY__: mostrar solo vacíos
+                    return isEmpty;
+                } else if (hasNoEmpty) {
+                    // Solo __NO_EMPTY__: mostrar solo no vacíos
+                    return !isEmpty;
+                }
+                
+                return false;
             }
             return true;
         });
@@ -2630,10 +2711,36 @@ function getFilteredData() {
       const cellValue = row[column];
       if (cellValue === null || cellValue === undefined) return false;
       if (Array.isArray(value)) {
-        if (value.includes('__EMPTY__') && (cellValue === '' || cellValue === null || cellValue === undefined)) {
-          return true;
+        const isEmpty = (cellValue === '' || cellValue === null || cellValue === undefined);
+        const hasEmpty = value.includes('__EMPTY__');
+        const hasNoEmpty = value.includes('__NO_EMPTY__');
+        const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+        
+        // Si hay otros valores específicos seleccionados
+        if (otherValues.length > 0) {
+          const matchesValue = value.includes(cellValue?.toString());
+          // Si coincide con un valor específico, incluirlo
+          if (matchesValue) return true;
+          // Si no coincide pero está vacío y __EMPTY__ está seleccionado, incluirlo
+          if (isEmpty && hasEmpty) return true;
+          // Si no coincide pero no está vacío y __NO_EMPTY__ está seleccionado, incluirlo
+          if (!isEmpty && hasNoEmpty) return true;
+          return false;
         }
-        return value.includes(cellValue?.toString());
+        
+        // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+        if (hasEmpty && hasNoEmpty) {
+          // Ambos seleccionados: mostrar todos
+          return true;
+        } else if (hasEmpty) {
+          // Solo __EMPTY__: mostrar solo vacíos
+          return isEmpty;
+        } else if (hasNoEmpty) {
+          // Solo __NO_EMPTY__: mostrar solo no vacíos
+          return !isEmpty;
+        }
+        
+        return false;
       }
       switch (filterType) {
         case 'text':
