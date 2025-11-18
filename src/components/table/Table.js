@@ -11,7 +11,9 @@ import {
     getTableFilterValues,
     setTableActiveFilters,
     setTableFilterValues,
-    getCurrentHeaders
+    getCurrentHeaders,
+    getTableFilterExclude,
+    setTableFilterExclude
 } from '../../store/index.js';
 import { sortData, createElement, getElement } from '../../utils/general.js';
 import { applyFilters } from '../filters/FilterManager.js';
@@ -1170,6 +1172,55 @@ function showExcelFilterDropdown(th, column) {
     customValueContainer.appendChild(customInput);
     customValueContainer.appendChild(addCustomBtn);
     dropdown.appendChild(customValueContainer);
+    
+    // Toggle para modo Exclude
+    const excludeToggleContainer = document.createElement('div');
+    excludeToggleContainer.style.display = 'flex';
+    excludeToggleContainer.style.alignItems = 'center';
+    excludeToggleContainer.style.gap = '0.5rem';
+    excludeToggleContainer.style.padding = '0.5rem';
+    excludeToggleContainer.style.marginBottom = '0.5rem';
+    excludeToggleContainer.style.borderTop = '1px solid var(--border-color)';
+    
+    const excludeCheckbox = document.createElement('input');
+    excludeCheckbox.type = 'checkbox';
+    excludeCheckbox.id = `exclude-toggle-table-${column}`;
+    excludeCheckbox.style.cursor = 'pointer';
+    excludeCheckbox.style.accentColor = '#47B2E5';
+    
+    const excludeLabel = document.createElement('label');
+    excludeLabel.htmlFor = `exclude-toggle-table-${column}`;
+    excludeLabel.innerHTML = '<strong>Exclude mode:</strong> Show all values EXCEPT the selected ones';
+    excludeLabel.style.cursor = 'pointer';
+    excludeLabel.style.fontSize = '0.85rem';
+    excludeLabel.style.userSelect = 'none';
+    excludeLabel.style.lineHeight = '1.4';
+    
+    // Estilizar el texto "Exclude mode:"
+    const strongTag = excludeLabel.querySelector('strong');
+    if (strongTag) {
+        strongTag.style.color = '#47B2E5';
+        strongTag.style.fontWeight = '600';
+    }
+    
+    // Cargar estado de exclusión guardado
+    const excludeState = getTableFilterExclude();
+    excludeCheckbox.checked = excludeState[column] || false;
+    
+    excludeCheckbox.addEventListener('change', () => {
+        const updatedExclude = { ...getTableFilterExclude(), [column]: excludeCheckbox.checked };
+        setTableFilterExclude(updatedExclude);
+        // Re-aplicar filtros
+        const filterArray = Array.from(selectedSet);
+        setTableFilterValues({ ...getTableFilterValues(), [column]: filterArray });
+        setTableActiveFilters({ ...getTableActiveFilters(), [column]: isDateColumn ? 'date' : 'reference' });
+        applyFilters();
+        refreshHeaderFilterIcons();
+    });
+    
+    excludeToggleContainer.appendChild(excludeCheckbox);
+    excludeToggleContainer.appendChild(excludeLabel);
+    dropdown.appendChild(excludeToggleContainer);
 
     // Options container
     const optionsDiv = document.createElement('div');

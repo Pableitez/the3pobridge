@@ -289,25 +289,34 @@ class AnalyticsDashboard {
             const hasNoEmpty = value.includes('__NO_EMPTY__');
             const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
             
+            // Verificar modo exclusión (si está disponible en el contexto)
+            const isExcludeMode = (combinedFilterValues._exclude && combinedFilterValues._exclude[column]) || false;
+            
+            let shouldInclude = false;
+            
             // Si hay otros valores específicos seleccionados
             if (otherValues.length > 0) {
               const matchesValue = value.includes(cellValue?.toString());
-              if (matchesValue) return true;
-              if (isEmpty && hasEmpty) return true;
-              if (!isEmpty && hasNoEmpty) return true;
-              return false;
+              if (matchesValue) shouldInclude = true;
+              if (isEmpty && hasEmpty) shouldInclude = true;
+              if (!isEmpty && hasNoEmpty) shouldInclude = true;
+            } else {
+              // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+              if (hasEmpty && hasNoEmpty) {
+                shouldInclude = true; // Ambos: mostrar todos
+              } else if (hasEmpty) {
+                shouldInclude = isEmpty; // Solo __EMPTY__: mostrar solo vacíos
+              } else if (hasNoEmpty) {
+                shouldInclude = !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+              }
             }
             
-            // Si solo hay __EMPTY__ y/o __NO_EMPTY__
-            if (hasEmpty && hasNoEmpty) {
-              return true; // Ambos: mostrar todos
-            } else if (hasEmpty) {
-              return isEmpty; // Solo __EMPTY__: mostrar solo vacíos
-            } else if (hasNoEmpty) {
-              return !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+            // Si está en modo exclusión, invertir la lógica
+            if (isExcludeMode) {
+              return !shouldInclude;
             }
             
-            return value.includes(cellValue?.toString());
+            return shouldInclude;
           }
           
           switch (filterType) {

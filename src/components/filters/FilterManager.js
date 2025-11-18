@@ -8,7 +8,10 @@ import {
     getTableFilterValues,
     getSortConfig,
     getActiveFilters,
-    setActiveFilters
+    setActiveFilters,
+    getModuleFilterExclude,
+    setModuleFilterExclude,
+    getTableFilterExclude
 } from '../../store/index.js';
 import { displayTable } from '../table/Table.js';
 import { sortData } from '../../utils/general.js';
@@ -1578,6 +1581,53 @@ function generateFilterSidebar(headers) {
               updateInputSummary();
             });
             list.appendChild(noEmptyBtn2);
+            
+            // Toggle para modo Exclude
+            const excludeToggleContainer = document.createElement('div');
+            excludeToggleContainer.style.display = 'flex';
+            excludeToggleContainer.style.alignItems = 'center';
+            excludeToggleContainer.style.gap = '0.5rem';
+            excludeToggleContainer.style.padding = '0.5rem';
+            excludeToggleContainer.style.marginTop = '0.5rem';
+            excludeToggleContainer.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+            
+            const excludeCheckbox = document.createElement('input');
+            excludeCheckbox.type = 'checkbox';
+            excludeCheckbox.id = `exclude-toggle-${selectedColumn}`;
+            excludeCheckbox.style.cursor = 'pointer';
+            excludeCheckbox.style.accentColor = '#47B2E5';
+            
+            const excludeLabel = document.createElement('label');
+            excludeLabel.htmlFor = `exclude-toggle-${selectedColumn}`;
+            excludeLabel.innerHTML = '<strong>Exclude mode:</strong> Show all values EXCEPT the selected ones';
+            excludeLabel.style.color = '#E8F4F8';
+            excludeLabel.style.cursor = 'pointer';
+            excludeLabel.style.fontSize = '0.9rem';
+            excludeLabel.style.userSelect = 'none';
+            excludeLabel.style.lineHeight = '1.4';
+            
+            // Estilizar el texto "Exclude mode:"
+            const strongTag = excludeLabel.querySelector('strong');
+            if (strongTag) {
+                strongTag.style.color = '#47B2E5';
+                strongTag.style.fontWeight = '600';
+            }
+            
+            // Cargar estado de exclusión guardado
+            const excludeState = getModuleFilterExclude();
+            excludeCheckbox.checked = excludeState[selectedColumn] || false;
+            
+            excludeCheckbox.addEventListener('change', () => {
+                const updatedExclude = { ...getModuleFilterExclude(), [selectedColumn]: excludeCheckbox.checked };
+                setModuleFilterExclude(updatedExclude);
+                applyFilters();
+                updateActiveFiltersSummary();
+            });
+            
+            excludeToggleContainer.appendChild(excludeCheckbox);
+            excludeToggleContainer.appendChild(excludeLabel);
+            list.appendChild(excludeToggleContainer);
+            
             const MAX_OPTIONS = 200;
             filteredValues = uniqueValues;
             if (filterTerm) {
@@ -1692,18 +1742,28 @@ function generateFilterSidebar(headers) {
           });
           function updateInputSummary() {
             const selected = Array.from(selectedSet).filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+            const isExcludeMode = getModuleFilterExclude()[selectedColumn] || false;
+            let summary = '';
+            
             if (selectedSet.has('__EMPTY__') && selectedSet.has('__NO_EMPTY__')) {
-              input.value = '(Empty), (No Empty)';
+              summary = '(Empty), (No Empty)';
             } else if (selectedSet.has('__EMPTY__')) {
-              input.value = '(Empty)';
+              summary = '(Empty)';
             } else if (selectedSet.has('__NO_EMPTY__')) {
-              input.value = '(No Empty)';
+              summary = '(No Empty)';
             } else if (selected.length === 0) {
-              input.value = '';
+              summary = '';
             } else if (selected.length <= 2) {
-              input.value = selected.join(', ');
+              summary = selected.join(', ');
             } else {
-              input.value = `${selected.length} selected`;
+              summary = `${selected.length} selected`;
+            }
+            
+            // Agregar indicador de modo exclusión
+            if (isExcludeMode && summary) {
+              input.value = `Exclude: ${summary}`;
+            } else {
+              input.value = summary;
             }
           }
           if (Array.isArray(getModuleFilterValues()[selectedColumn])) {
@@ -2066,6 +2126,10 @@ function generateFilterSidebar(headers) {
           const filterObj = quickFilters[name];
           if (filterObj) {
             setModuleFilterValues({ ...filterObj.filterValues });
+            // Restaurar estado de exclusión si existe
+            if (filterObj.filterExclude) {
+              setModuleFilterExclude({ ...filterObj.filterExclude });
+            }
             // Reconstruir activeFilters
             const newActiveFilters = {};
             for (const key of Object.keys(filterObj.filterValues)) {
@@ -2277,6 +2341,7 @@ function applyFilters() {
         } else {
             const value = moduleFilterValues[column];
             if (!value || (Array.isArray(value) && value.length === 0)) return;
+            const isExcludeMode = getModuleFilterExclude()[column] || false;
             filteredData = filteredData.filter(row => {
                 const cellValue = row[column];
                 if (cellValue === null || cellValue === undefined) return false;
@@ -2286,31 +2351,37 @@ function applyFilters() {
                     const hasNoEmpty = value.includes('__NO_EMPTY__');
                     const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
                     
+                    let shouldInclude = false;
+                    
                     // Si hay otros valores específicos seleccionados
                     if (otherValues.length > 0) {
                         const matchesValue = value.includes(cellValue?.toString());
                         // Si coincide con un valor específico, incluirlo
-                        if (matchesValue) return true;
+                        if (matchesValue) shouldInclude = true;
                         // Si no coincide pero está vacío y __EMPTY__ está seleccionado, incluirlo
-                        if (isEmpty && hasEmpty) return true;
+                        if (isEmpty && hasEmpty) shouldInclude = true;
                         // Si no coincide pero no está vacío y __NO_EMPTY__ está seleccionado, incluirlo
-                        if (!isEmpty && hasNoEmpty) return true;
-                        return false;
+                        if (!isEmpty && hasNoEmpty) shouldInclude = true;
+                    } else {
+                        // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+                        if (hasEmpty && hasNoEmpty) {
+                            // Ambos seleccionados: mostrar todos
+                            shouldInclude = true;
+                        } else if (hasEmpty) {
+                            // Solo __EMPTY__: mostrar solo vacíos
+                            shouldInclude = isEmpty;
+                        } else if (hasNoEmpty) {
+                            // Solo __NO_EMPTY__: mostrar solo no vacíos
+                            shouldInclude = !isEmpty;
+                        }
                     }
                     
-                    // Si solo hay __EMPTY__ y/o __NO_EMPTY__
-                    if (hasEmpty && hasNoEmpty) {
-                        // Ambos seleccionados: mostrar todos
-                        return true;
-                    } else if (hasEmpty) {
-                        // Solo __EMPTY__: mostrar solo vacíos
-                        return isEmpty;
-                    } else if (hasNoEmpty) {
-                        // Solo __NO_EMPTY__: mostrar solo no vacíos
-                        return !isEmpty;
+                    // Si está en modo exclusión, invertir la lógica
+                    if (isExcludeMode) {
+                        return !shouldInclude;
                     }
                     
-                    return false;
+                    return shouldInclude;
                 }
                 switch (filterType) {
                     case 'text':
@@ -2333,6 +2404,7 @@ function applyFilters() {
     Object.entries(tableActiveFilters).forEach(([column, filterType]) => {
         const value = tableFilterValues[column];
         if (!value || (Array.isArray(value) && value.length === 0)) return;
+        const isExcludeMode = getTableFilterExclude()[column] || false;
         filteredData = filteredData.filter(row => {
             const cellValue = row[column];
             if (cellValue === null || cellValue === undefined) return false;
@@ -2342,31 +2414,37 @@ function applyFilters() {
                 const hasNoEmpty = value.includes('__NO_EMPTY__');
                 const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
                 
+                let shouldInclude = false;
+                
                 // Si hay otros valores específicos seleccionados
                 if (otherValues.length > 0) {
                     const matchesValue = value.includes(cellValue?.toString());
                     // Si coincide con un valor específico, incluirlo
-                    if (matchesValue) return true;
+                    if (matchesValue) shouldInclude = true;
                     // Si no coincide pero está vacío y __EMPTY__ está seleccionado, incluirlo
-                    if (isEmpty && hasEmpty) return true;
+                    if (isEmpty && hasEmpty) shouldInclude = true;
                     // Si no coincide pero no está vacío y __NO_EMPTY__ está seleccionado, incluirlo
-                    if (!isEmpty && hasNoEmpty) return true;
-                    return false;
+                    if (!isEmpty && hasNoEmpty) shouldInclude = true;
+                } else {
+                    // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+                    if (hasEmpty && hasNoEmpty) {
+                        // Ambos seleccionados: mostrar todos
+                        shouldInclude = true;
+                    } else if (hasEmpty) {
+                        // Solo __EMPTY__: mostrar solo vacíos
+                        shouldInclude = isEmpty;
+                    } else if (hasNoEmpty) {
+                        // Solo __NO_EMPTY__: mostrar solo no vacíos
+                        shouldInclude = !isEmpty;
+                    }
                 }
                 
-                // Si solo hay __EMPTY__ y/o __NO_EMPTY__
-                if (hasEmpty && hasNoEmpty) {
-                    // Ambos seleccionados: mostrar todos
-                    return true;
-                } else if (hasEmpty) {
-                    // Solo __EMPTY__: mostrar solo vacíos
-                    return isEmpty;
-                } else if (hasNoEmpty) {
-                    // Solo __NO_EMPTY__: mostrar solo no vacíos
-                    return !isEmpty;
+                // Si está en modo exclusión, invertir la lógica
+                if (isExcludeMode) {
+                    return !shouldInclude;
                 }
                 
-                return false;
+                return shouldInclude;
             }
             return true;
         });
@@ -2703,8 +2781,9 @@ function saveQuickFilter(name, urgencyCard, container, containerTitle, hubType =
   const headers = Object.keys(getOriginalData()[0] || {});
   const filterValues = { ...getModuleFilterValues() };
   const activeFilters = { ...getModuleActiveFilters() };
+  const filterExclude = { ...getModuleFilterExclude() }; // Guardar estado de exclusión
   const quickFilters = loadQuickFilters();
-  const filterObj = { filterValues, activeFilters, headers, hubType };
+  const filterObj = { filterValues, activeFilters, filterExclude, headers, hubType };
   if (urgencyCard && urgencyCard !== 'Ninguna') filterObj.linkedUrgencyCard = urgencyCard;
   if (container) filterObj.container = container;
   if (containerTitle) filterObj.containerTitle = containerTitle;

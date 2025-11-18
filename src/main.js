@@ -173,7 +173,8 @@ import {
   getVisibleColumns,
   getTableActiveFilters,
   getTableFilterValues,
-  getModuleActiveFilters // <-- Añadido aquí
+  getModuleActiveFilters,
+  setModuleFilterExclude // <-- Añadido para modo exclusión
 } from './store/index.js';
 import { validateCSVFile, parseCSVFile } from './services/csvService.js';
 import { displayTable, updatePagination, colorRowsByUrgencia, showInfoModal } from './components/table/Table.js';
@@ -3137,9 +3138,15 @@ function applyDashboardQuickFilters() {
   const activeNames = hubType === 'dq' ? (window.activeDqDashboardQuickFilters || []) : (window.activeDashboardQuickFilters || []);
   let combinedFilterValues = {};
   let combinedActiveFilters = {};
+  let combinedFilterExclude = {}; // Combinar estados de exclusión
   activeNames.forEach(name => {
     const filterObj = quickFilters[name];
     if (filterObj) {
+      // Combinar estados de exclusión
+      if (filterObj.filterExclude) {
+        Object.assign(combinedFilterExclude, filterObj.filterExclude);
+      }
+      
       for (const key in filterObj.filterValues) {
         const value = filterObj.filterValues[key];
         if (combinedFilterValues[key]) {
@@ -3170,6 +3177,10 @@ function applyDashboardQuickFilters() {
   });
   setModuleFilterValues(combinedFilterValues);
   setModuleActiveFilters(combinedActiveFilters);
+  // Aplicar estados de exclusión
+  if (typeof setModuleFilterExclude === 'function') {
+    setModuleFilterExclude(combinedFilterExclude);
+  }
   const filteredData = getFilteredData();
   displayTable(filteredData);
   renderActiveFiltersSummaryChips();
@@ -6533,6 +6544,7 @@ function applyOpsHubQuickFilters() {
   // Unir ambos arrays de nombres de quick filters (urgency usa linkedUrgencyCard)
   let combinedFilterValues = {};
   let combinedActiveFilters = {};
+  let combinedFilterExclude = {}; // Combinar estados de exclusión
   // Primero, aplicar los quick filters del dashboard
   activeDashboardQuickFilters.forEach(name => {
     const filterObj = quickFiltersObj[name];
@@ -6540,6 +6552,11 @@ function applyOpsHubQuickFilters() {
       // Usar activeFilters guardados si están disponibles
       const savedActiveFilters = filterObj.activeFilters || {};
       const savedFilterValues = filterObj.filterValues || {};
+      
+      // Combinar estados de exclusión
+      if (filterObj.filterExclude) {
+        Object.assign(combinedFilterExclude, filterObj.filterExclude);
+      }
       
       for (const key in savedFilterValues) {
         const value = savedFilterValues[key];
@@ -6580,6 +6597,12 @@ function applyOpsHubQuickFilters() {
     const entry = Object.entries(quickFiltersObj).find(([name, obj]) => obj.linkedUrgencyCard === cardKey);
     if (entry) {
       const [, filterObj] = entry;
+      
+      // Combinar estados de exclusión de filtros de urgencia
+      if (filterObj.filterExclude) {
+        Object.assign(combinedFilterExclude, filterObj.filterExclude);
+      }
+      
       for (const key in filterObj.filterValues) {
         const value = filterObj.filterValues[key];
         if (combinedFilterValues[key]) {
@@ -6614,6 +6637,10 @@ function applyOpsHubQuickFilters() {
   // Aplicar los filtros
   setModuleFilterValues(combinedFilterValues);
   setModuleActiveFilters(combinedActiveFilters);
+  // Aplicar estados de exclusión
+  if (typeof setModuleFilterExclude === 'function') {
+    setModuleFilterExclude(combinedFilterExclude);
+  }
   // Aplicar filtros sin cerrar el modal
   const filteredData = getFilteredData();
   displayTable(filteredData);

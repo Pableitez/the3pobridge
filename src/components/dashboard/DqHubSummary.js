@@ -1119,6 +1119,10 @@ export class DqHubSummary {
     // Aplicar SOLO el quick filter
     window.setModuleActiveFilters(quickFilterActiveFilters);
     window.setModuleFilterValues(quickFilterValues);
+    // Restaurar estado de exclusión si existe
+    if (window.setModuleFilterExclude && filterObj.filterExclude) {
+        window.setModuleFilterExclude(filterObj.filterExclude);
+    }
     
     // Obtener el número de filas filtradas usando la función estándar
     const filteredData = window.getFilteredData();
@@ -1129,6 +1133,13 @@ export class DqHubSummary {
     // Restaurar el estado original de filtros
     window.setModuleActiveFilters(currentActiveFilters);
     window.setModuleFilterValues(currentFilterValues);
+    // Restaurar estado de exclusión original si existe
+    if (window.getModuleFilterExclude) {
+        const currentExclude = window.getModuleFilterExclude();
+        if (window.setModuleFilterExclude) {
+            window.setModuleFilterExclude(currentExclude);
+        }
+    }
     
     return filteredData;
   }

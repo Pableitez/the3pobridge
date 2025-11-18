@@ -990,6 +990,10 @@ class DqHubManager {
         if (window.setModuleActiveFilters && window.setModuleFilterValues) {
             window.setModuleActiveFilters(quickFilterActiveFilters);
             window.setModuleFilterValues(quickFilterValues);
+            // Restaurar estado de exclusión si existe
+            if (window.setModuleFilterExclude && filterObj.filterExclude) {
+                window.setModuleFilterExclude(filterObj.filterExclude);
+            }
             
             // Obtener el número de filas filtradas usando la función estándar
             const filteredData = window.getFilteredData ? window.getFilteredData() : [];
@@ -1161,6 +1165,10 @@ class DqHubManager {
         if (!hasDuplicateFilters && window.setModuleFilterValues && window.setModuleActiveFilters) {
             window.setModuleFilterValues(combinedFilterValues);
             window.setModuleActiveFilters(combinedActiveFilters);
+            // Restaurar estados de exclusión
+            if (window.setModuleFilterExclude && Object.keys(combinedFilterExclude).length > 0) {
+                window.setModuleFilterExclude(combinedFilterExclude);
+            }
             
             // Usar las funciones globales disponibles
             if (window.getFilteredData) {
@@ -1441,12 +1449,18 @@ class DqHubManager {
         // Combinar filtros de urgencia activos
         let combinedFilterValues = {};
         let combinedActiveFilters = {};
+        let combinedFilterExclude = {}; // Combinar estados de exclusión
 
         activeUrgencyCards.forEach(cardKey => {
             const entry = Object.entries(quickFilters).find(([name, obj]) => obj.linkedUrgencyCard === cardKey);
             
             if (entry) {
                 const [, filterObj] = entry;
+                
+                // Combinar estados de exclusión
+                if (filterObj.filterExclude) {
+                    Object.assign(combinedFilterExclude, filterObj.filterExclude);
+                }
                 
                 for (const k in filterObj.filterValues) {
                     const value = filterObj.filterValues[k];
@@ -1521,25 +1535,34 @@ class DqHubManager {
                         const hasNoEmpty = value.includes('__NO_EMPTY__');
                         const otherValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
                         
+                        // Verificar si está en modo exclusión
+                        const isExcludeMode = combinedFilterExclude[key] || false;
+                        
+                        let shouldInclude = false;
+                        
                         // Si hay otros valores específicos seleccionados
                         if (otherValues.length > 0) {
                             const matchesValue = value.includes(row[key]);
-                            if (matchesValue) return true;
-                            if (isEmpty && hasEmpty) return true;
-                            if (!isEmpty && hasNoEmpty) return true;
-                            return false;
+                            if (matchesValue) shouldInclude = true;
+                            if (isEmpty && hasEmpty) shouldInclude = true;
+                            if (!isEmpty && hasNoEmpty) shouldInclude = true;
+                        } else {
+                            // Si solo hay __EMPTY__ y/o __NO_EMPTY__
+                            if (hasEmpty && hasNoEmpty) {
+                                shouldInclude = true; // Ambos: mostrar todos
+                            } else if (hasEmpty) {
+                                shouldInclude = isEmpty; // Solo __EMPTY__: mostrar solo vacíos
+                            } else if (hasNoEmpty) {
+                                shouldInclude = !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+                            }
                         }
                         
-                        // Si solo hay __EMPTY__ y/o __NO_EMPTY__
-                        if (hasEmpty && hasNoEmpty) {
-                            return true; // Ambos: mostrar todos
-                        } else if (hasEmpty) {
-                            return isEmpty; // Solo __EMPTY__: mostrar solo vacíos
-                        } else if (hasNoEmpty) {
-                            return !isEmpty; // Solo __NO_EMPTY__: mostrar solo no vacíos
+                        // Si está en modo exclusión, invertir la lógica
+                        if (isExcludeMode) {
+                            return !shouldInclude;
                         }
                         
-                        return value.includes(row[key]);
+                        return shouldInclude;
                     }
                     if (value === '__EMPTY__') {
                         return row[key] === '' || row[key] === null || row[key] === undefined;

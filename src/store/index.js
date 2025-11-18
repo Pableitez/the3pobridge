@@ -13,10 +13,12 @@ let state = {
 // Table filters state
 let tableFilterValues = {};
 let tableActiveFilters = {};
+let tableFilterExclude = {}; // Track which columns are in exclude mode for table filters
 
 // Module filters state
 let moduleFilterValues = {};
 let moduleActiveFilters = {};
+let moduleFilterExclude = {}; // Track which columns are in exclude mode
 
 import { getCurrentCustomColumns } from '../components/custom/CustomColumnManager.js';
 
@@ -124,6 +126,14 @@ export function setTableActiveFilters(filters) {
     tableActiveFilters = filters;
 }
 
+export function getTableFilterExclude() {
+    return tableFilterExclude;
+}
+
+export function setTableFilterExclude(exclude) {
+    tableFilterExclude = exclude;
+}
+
 // Module filter functions
 export function getModuleFilterValues() {
     return moduleFilterValues;
@@ -139,4 +149,12 @@ export function getModuleActiveFilters() {
 
 export function setModuleActiveFilters(filters) {
     moduleActiveFilters = filters;
+}
+
+export function getModuleFilterExclude() {
+    return moduleFilterExclude;
+}
+
+export function setModuleFilterExclude(exclude) {
+    moduleFilterExclude = exclude;
 }
