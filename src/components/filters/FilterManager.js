@@ -548,11 +548,20 @@ function generateFilterSidebar(headers) {
         }
       });
       // Chips de otros filtros
+      const excludeState = getModuleFilterExclude();
       Object.entries(filterValues).forEach(([key, value]) => {
         if (!key.endsWith('_start') && !key.endsWith('_end') && !key.endsWith('_empty') && Array.isArray(value) && value.length > 0) {
           const tag = document.createElement('div');
           tag.className = 'modal-filter-tag';
-          tag.innerHTML = `<span>${key}: ${value.join(', ')}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
+          const isExcludeMode = excludeState[key] || false;
+          const displayValues = value.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+          const emptyValues = [];
+          if (value.includes('__EMPTY__')) emptyValues.push('(Empty)');
+          if (value.includes('__NO_EMPTY__')) emptyValues.push('(No Empty)');
+          const allDisplayValues = [...emptyValues, ...displayValues];
+          const valuesText = allDisplayValues.length > 0 ? allDisplayValues.join(', ') : '';
+          const prefix = isExcludeMode ? 'Exclude mode: All EXCEPT ' : '';
+          tag.innerHTML = `<span>${key}: ${prefix}${valuesText}</span><button class="modal-filter-tag-remove" data-column="${key}">×</button>`;
           list.appendChild(tag);
         }
       });
@@ -1761,7 +1770,7 @@ function generateFilterSidebar(headers) {
             
             // Agregar indicador de modo exclusión
             if (isExcludeMode && summary) {
-              input.value = `Exclude: ${summary}`;
+              input.value = `Exclude mode: All EXCEPT ${summary}`;
             } else {
               input.value = summary;
             }
@@ -1883,12 +1892,21 @@ function generateFilterSidebar(headers) {
         }
       });
       // Add other filters
+      const excludeState = getModuleFilterExclude();
       Object.entries(otherFilters).forEach(([column, values]) => {
         if (Array.isArray(values) && values.length > 0) {
           const tag = document.createElement('div');
           tag.className = 'modal-filter-tag';
+          const isExcludeMode = excludeState[column] || false;
+          const displayValues = values.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+          const emptyValues = [];
+          if (values.includes('__EMPTY__')) emptyValues.push('(Empty)');
+          if (values.includes('__NO_EMPTY__')) emptyValues.push('(No Empty)');
+          const allDisplayValues = [...emptyValues, ...displayValues];
+          const valuesText = allDisplayValues.length > 0 ? allDisplayValues.join(', ') : '';
+          const prefix = isExcludeMode ? 'Exclude mode: All EXCEPT ' : '';
           tag.innerHTML = `
-            <span>${column}: ${values.join(', ')}</span>
+            <span>${column}: ${prefix}${valuesText}</span>
             <button class="modal-filter-tag-remove" data-column="${column}">×</button>
           `;
           list.appendChild(tag);
@@ -2650,13 +2668,22 @@ export function renderActiveFiltersSummaryChips() {
     }
   });
   // Other filters
+  const excludeState = getModuleFilterExclude();
   Object.entries(otherFilters).forEach(([column, values]) => {
     if (Array.isArray(values) && values.length > 0) {
       count++;
       const tag = document.createElement('div');
       tag.className = 'filter-tag';
+      const isExcludeMode = excludeState[column] || false;
+      const displayValues = values.filter(v => v !== '__EMPTY__' && v !== '__NO_EMPTY__');
+      const emptyValues = [];
+      if (values.includes('__EMPTY__')) emptyValues.push('(Empty)');
+      if (values.includes('__NO_EMPTY__')) emptyValues.push('(No Empty)');
+      const allDisplayValues = [...emptyValues, ...displayValues];
+      const valuesText = allDisplayValues.length > 0 ? allDisplayValues.join(', ') : '';
+      const prefix = isExcludeMode ? 'Exclude mode: All EXCEPT ' : '';
       tag.innerHTML = `
-        <span>${column}: ${values.join(', ')}</span>
+        <span>${column}: ${prefix}${valuesText}</span>
         <button class="filter-tag-remove" data-column="${column}">×</button>
       `;
       summary.appendChild(tag);
